@@ -8,13 +8,12 @@ import unittest
 import numpy as np
 from pynestml.frontend.pynestml_frontend import to_nest, install_nest
 
-directories = ['../models', '../resources', '../target']
+directories = ['../models', 'resources', 'target']
 for i in directories:
     if not os.path.exists(i):
         os.makedirs(i)
 
 try:
-    import matplotlib
     import matplotlib.pyplot as plt
     TEST_PLOTS = True
 except:
@@ -35,19 +34,19 @@ class NestGPeExpTest(unittest.TestCase):
         nest_path="/home/abolfazl/prog/nest-build/"
         suffix = '_nestml'
 
-        to_nest(input_path=input_path,
-                target_path=target_path,
-                logging_level="INFO",
-                suffix=suffix,
-                module_name=module_name)
+        # to_nest(input_path=input_path,
+        #         target_path=target_path,
+        #         logging_level="INFO",
+        #         suffix=suffix,
+        #         module_name=module_name)
 
-        install_nest(target_path, nest_path)
+        # install_nest(target_path, nest_path)
 
         nest.Install(module_name)
         model = "terub_gpe_nestml"
 
         dt = 0.01
-        t_simulation = 1000.0
+        t_simulation = 2000.0
         nest.SetKernelStatus({"resolution": dt})
 
         neuron = nest.Create(model)
