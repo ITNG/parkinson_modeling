@@ -9,6 +9,7 @@ results/
 __pycache__/
 resources/
 target/
+modeldb/
 
 
 *.pyc
