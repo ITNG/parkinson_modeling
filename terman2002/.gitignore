@@ -7,6 +7,8 @@ e/
 template/
 results/
 __pycache__/
+resources/
+target/
 
 
 *.pyc
