@@ -27,7 +27,7 @@ par_s = {
     'eps': 3.75e-05 / b2.ms,  # 1/ms Guo 0.00005 Terman02 0.0000375
     'phi': 0.75, 'phir': 0.2,  # Guo 0.5 Terman02 0.2
     'kca': 22.5,  'thn': -80, 'thh': -57, 'thr': 68, 'ab': -30, 'k1': 15,
-    'thetag_g': 30., 'thetagH_g': -39., 'sigmagH_g': 8.,
+    'thetag_s': 30., 'thetagH_s': -39., 'sigmagH_s': 8.,
     'i_ext': 0 * b2.pA, 'C': 1 * b2.pF,
 }
 
@@ -48,7 +48,7 @@ par_g = {
     'k1g': 30., 'kcag': 20.,  # Report:15,  Terman Rubin 2002: 20.0
     'phig': 1., 'phing': .05,  # Report: 0.1, Terman Rubin 2002: 0.05
     'phihg': .05, 'epsg': 0.0001 / b2.ms,
-    'thetag': 20.,  'thetagH': -57., 'sigmagH': 2.,
+    'thetag_g': 20.,  'thetagH_g': -57., 'sigmagH_g': 2.,
     'i_ext': 0.0 * b2.pA,  'C': 1 * b2.pF,
 }
 
@@ -62,46 +62,41 @@ par_syn = {
     'betag': 0.08 / b2.ms,
 }
 
-par_s['num'] = 1
-par_g['num'] = 1
+par_s['num'] = 10
+par_g['num'] = 10
 par_s['v0'] = (rand(par_s['num']) * 20 - 10 - 70) * b2.mV
 par_g['v0'] = (rand(par_g['num']) * 20 - 10 - 70) * b2.mV
 
-g_hat_gs = 2.5*b2.nS
-g_hat_sg = 0.03*b2.nS
-g_hat_gg = 0.06*b2.nS
-
-# par_syn['p_sg'] =
-par_syn['p_gs'] = 3 / par_g['num']
-par_syn['p_sg'] = 1 / par_g['num']
-par_syn['p_gg'] = 1
-
-par_syn['g_gs'] = g_hat_gs / (par_syn['p_gs'] * par_g['num'])
-par_syn['g_sg'] = g_hat_sg / (par_syn['p_sg'] * par_s['num'])
-par_syn['g_gg'] = g_hat_gg / (par_syn['p_gg'] * par_g['num'])
 
 par_sim = {
     'integration_method': "rk4",
-    'simulation_time': 2000 * b2.ms,
-    'dt': 0.05 * b2.ms,
+    'simulation_time': 4000 * b2.ms,
+    'dt': 0.1 * b2.ms,
+    "state": "sparse",
+    "standalone_mode" : True,
 }
 
+states = ['sparse', 'episodic', 'continuous']
 
 if __name__ == "__main__":
 
-    start_time = time()
-    state = "sparse"
     K = 2
-    # G_gs = nx.watts_strogatz_graph(par_s['num'], K, 0, seed=1)
-    # A = nx.to_numpy_array(G_gs, dtype=int)
+    G_gs = nx.watts_strogatz_graph(par_s['num'], K, 0, seed=1)
+    A = nx.to_numpy_array(G_gs, dtype=int)
     # A = np.asarray([[0, 1],[1, 0]])
-    # par_syn['adj_gs'] = A
+    par_syn['adj_gs'] = A
 
-    monitors = simulate_STN_GPe_population(par_s,
-                                           par_g,
-                                           par_syn,
-                                           par_sim)
+    for state in states:
+        start_time = time()
+        par_sim['state'] = state
+        
+        monitors = simulate_STN_GPe_population(par_s,
+                                               par_g,
+                                               par_syn,
+                                               par_sim)
 
-    print("Done in {}".format(time() - start_time))
-    plot_voltage(monitors, indices=[0, 0], filename="v_{}".format(state))
-    # plot_raster(monitors, filename="sp_{}".format(state))
+        print("Done in {}".format(time() - start_time))
+        plot_voltage(monitors, indices=[0, 1], filename="v_{}".format(state))
+        plot_raster(monitors, filename="sp_{}".format(state))
+    
+

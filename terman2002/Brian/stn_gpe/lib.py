@@ -4,13 +4,51 @@ import brian2 as b2
 from os.path import join
 
 
+if 1:
+    b2.set_device('cpp_standalone',
+                  build_on_run=False,
+                  directory="output")
+
+
 def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
 
-    b2.set_device('cpp_standalone')
+    b2.start_scope()
+
+    if par_sim['standalone_mode']:
+        b2.get_device().reinit()
+        b2.get_device().activate(build_on_run=False,
+                                 directory="output")
     # b2.prefs.codegen.target = 'numpy'
-    # b2.prefs.devices.cpp_standalone.openmp_threads = 4
+    # b2.prefs.devices.cpp_standalone.openmp_threads = 1
 
     b2.defaultclock.dt = par_sim['dt']
+
+    if par_sim['state'] == "sparse":
+        g_hat_gs = 2.5*b2.nS
+        g_hat_sg = 0.03*b2.nS
+        g_hat_gg = 0.06*b2.nS
+
+    elif par_sim['state'] == "episodic":
+        g_hat_gs = 2.5*b2.nS
+        g_hat_sg = 0.016*b2.nS
+        g_hat_gg = 0.0*b2.nS
+
+    elif par_sim['state'] == "continuous":
+        g_hat_gs = 2.5*b2.nS
+        g_hat_sg = 0.1*b2.nS
+        g_hat_gg = 0.02*b2.nS
+
+    else:
+        print("unknown state of the network")
+        exit(0)
+
+    par_syn['p_gs'] = 3 / par_g['num']
+    par_syn['p_sg'] = 1 / par_g['num']
+    par_syn['p_gg'] = 1.0
+
+    par_syn['g_gs'] = g_hat_gs / (par_syn['p_gs'] * par_g['num'])
+    par_syn['g_sg'] = g_hat_sg / (par_syn['p_sg'] * par_s['num'])
+    par_syn['g_gg'] = g_hat_gg / (par_syn['p_gg'] * par_g['num'])
 
     eqs_s = '''
 
@@ -32,12 +70,16 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     ica = gca * sinf ** 2 * (vs - vca) : amp 
     it = gt * ainf ** 3 * binf ** 2 * (vs - vca) : amp 
     i_exts : amp 
+    i_syn_gs : amp
+
+    Hinf_s = 1./(1+exp(-(vs-thetag_s*mV-thetagH_s*mV)/(sigmagH_s*mV))):1
+    ds_sg/dt = alphag * Hinf_s * (1 - s_sg) - betag * s_sg : 1
 
     dh/dt  = phi * (hinf - h) / tauh  : 1
     dn/dt  = phi * (ninf - n) / taun  : 1
     dr/dt  = phir * (rinf - r) / taur : 1
     dca/dt = eps * ((-ica - it)/pA - kca* ca) : 1 
-    membrane_Im = -(il + ina + ik + it + ica + iahp) + i_exts  : amp
+    membrane_Im = -(il + ina + ik + it + ica + iahp)+i_exts+i_syn_gs:amp
         
     dvs/dt = membrane_Im/C : volt
     '''
@@ -59,8 +101,14 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     iahpg = gahpg * (vg - vkg) * cag / (cag + k1g) : amp
     icag = gcag * (sinfg ** 2) * (vg - vcag) : amp
     ilg = glg * (vg - vlg) : amp
+    i_syn_sg : amp
+    i_syn_gg : amp
 
-    membrane_Im =  -(itg + inag + ikg + iahpg + icag + ilg) + i_extg : amp
+    Hinf_g = 1./(1+exp(-(vg-thetag_g*mV-thetagH_g*mV)/(sigmagH_g*mV))):1
+    ds_gs/dt = alphas * Hinf_g * (1 - s_gs) - betas * s_gs : 1
+    ds_gg/dt = alphag * Hinf_g * (1 - s_gg) - betag * s_gg : 1
+
+    membrane_Im =-(itg+inag+ikg+iahpg+icag+ilg)+i_extg+i_syn_sg+i_syn_gg : amp
     dhg/dt = phihg*(hinfg-hg)/tauhg : 1
     dng/dt = phing*(ninfg-ng)/taung : 1
     drg/dt = phig*(rinfg-rg)/taurg  : 1
@@ -98,25 +146,26 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
                                namespace={**par_g, **par_syn},
                                )
 
-    # syn_gs = b2.Synapses(neurons_g, neurons_s, eqs_syn_gs,
-    #                      method=par_sim['integration_method'],
-    #                      dt=par_sim['dt'],
-    #                      namespace=par_syn)
-    # cols, rows = np.nonzero(par_syn['adj_gs'])
-    # syn_gs.connect(i=rows, j=cols)
-    # syn_gs.connect(j='i')
+    syn_gs = b2.Synapses(neurons_g, neurons_s, eqs_syn_gs,
+                         method=par_sim['integration_method'],
+                         dt=par_sim['dt'],
+                         namespace=par_syn)
 
-    # syn_sg = b2.Synapses(neurons_s, neurons_g, eqs_syn_sg,
-    #                      method=par_sim['integration_method'],
-    #                      dt=par_sim['dt'],
-    #                      namespace=par_syn)
-    # syn_sg.connect(j='i')
+    cols, rows = np.nonzero(par_syn['adj_gs'])
+    syn_gs.connect(i=rows, j=cols)
+    syn_gs.connect(j='i')
 
-    # syn_gg = b2.Synapses(neurons_g, neurons_g, eqs_syn_gg,
-    #                      method=par_sim['integration_method'],
-    #                      dt=par_sim['dt'],
-    #                      namespace=par_syn)
-    # syn_gg.connect(p=par_syn['p_gg'])
+    syn_sg = b2.Synapses(neurons_s, neurons_g, eqs_syn_sg,
+                         method=par_sim['integration_method'],
+                         dt=par_sim['dt'],
+                         namespace=par_syn)
+    syn_sg.connect(j='i')
+
+    syn_gg = b2.Synapses(neurons_g, neurons_g, eqs_syn_gg,
+                         method=par_sim['integration_method'],
+                         dt=par_sim['dt'],
+                         namespace=par_syn)
+    syn_gg.connect(condition='i!=j', p=par_syn['p_gg'])
 
     neurons_s.vs = par_s['v0']
     neurons_s.h = "hinf"
@@ -141,15 +190,21 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
 
     net = b2.Network(neurons_s)
     net.add(neurons_g)
-    # net.add(syn_gs)
-    # net.add(syn_sg)
-    # net.add(syn_gg)
+    net.add(syn_gs)
+    net.add(syn_sg)
+    net.add(syn_gg)
     net.add(st_mon_s)
     net.add(st_mon_g)
     net.add(sp_mon_s)
     net.add(sp_mon_g)
 
     net.run(par_sim['simulation_time'])
+
+    if par_sim['standalone_mode']:
+        b2.get_device().build(directory="output",
+                              compile=True,
+                              run=True,
+                              debug=False)
 
     return st_mon_s, st_mon_g, sp_mon_s, sp_mon_g
 

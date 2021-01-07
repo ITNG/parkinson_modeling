@@ -1,4 +1,5 @@
 import os
+from matplotlib import markers
 import numpy as np
 import brian2 as b2
 import pylab as plt
@@ -33,23 +34,23 @@ def plot_voltage(monitors, indices, filename):
     ax[-1, 1].set_xlabel("time [ms]", fontsize=14)
     
     plt.tight_layout()
-    plt.savefig(join("figs", '{}.png'.format(filename)))
+    plt.savefig(join("data", '{}.png'.format(filename)))
     # plt.show()
 
 
-def plot_raster(monitors, filename="spikes"):
+def plot_raster(monitors, filename="spikes", markersize=2):
     sp_mon_s, sp_mon_g = monitors[2:]
     fig, ax = plt.subplots(2, figsize=(9, 4), sharex=True)
     ax[0].plot(sp_mon_s.t / b2.ms,
-               sp_mon_s.i, "b.",
-               ms=3)
+               sp_mon_s.i, "bo",
+               ms=markersize)
     ax[1].plot(sp_mon_g.t / b2.ms,
-               sp_mon_g.i, "r.",
-               ms=3)
+               sp_mon_g.i, "ro",
+               ms=markersize)
 
     ax[1].set_xlabel("time [ms]")
     ax[0].set_ylabel("STN neuron id")
     ax[1].set_ylabel("GPe neuron id")
     plt.tight_layout()
-    plt.savefig(join("figs", '{}.png'.format(filename)))
+    plt.savefig(join("data", '{}.png'.format(filename)))
     # plt.show()
