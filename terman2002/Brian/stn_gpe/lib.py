@@ -10,11 +10,10 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     # b2.prefs.codegen.target = 'numpy'
     # b2.prefs.devices.cpp_standalone.openmp_threads = 4
 
-    num_s = par_s['num']
-    num_g = par_g['num']
     b2.defaultclock.dt = par_sim['dt']
 
     eqs_s = '''
+
     minf = 1/(1+exp(-(vs-thetam*mV)/(sigmam*mV))) : 1
     hinf = 1/(1+exp(-(vs-thetah*mV)/(sigmah*mV))) : 1 
     ninf = 1/(1+exp(-(vs-thetan*mV)/(sigman*mV))) : 1
@@ -33,20 +32,18 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     ica = gca * sinf ** 2 * (vs - vca) : amp 
     it = gt * ainf ** 3 * binf ** 2 * (vs - vca) : amp 
     i_exts : amp 
-    i_syn_gs : amp
-    Hinf_s = 1./(1+exp(-(vs-thetag_s*mV-thetagH_s*mV)/(sigmagH_s*mV))):1
-    ds_sg/dt = alphag * Hinf_s * (1 - s_sg) - betag * s_sg : 1
 
     dh/dt  = phi * (hinf - h) / tauh  : 1
     dn/dt  = phi * (ninf - n) / taun  : 1
     dr/dt  = phir * (rinf - r) / taur : 1
     dca/dt = eps * ((-ica - it)/pA - kca* ca) : 1 
-    
-    membrane_Im = -(il+ina+ik+it+ica+iahp) + i_exts + i_syn_gs:amp
+    membrane_Im = -(il + ina + ik + it + ica + iahp) + i_exts  : amp
+        
     dvs/dt = membrane_Im/C : volt
     '''
-
     eqs_g = '''
+    i_extg : amp
+
     ainfg = 1 / (1 + exp(-(vg - thetaag*mV) / (sigag*mV))) : 1
     sinfg = 1 / (1 + exp(-(vg - thetasg*mV) / (sigsg*mV))) : 1
     rinfg = 1 / (1 + exp(-(vg - thetarg*mV) / (sigrg*mV))) : 1
@@ -62,18 +59,12 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     iahpg = gahpg * (vg - vkg) * cag / (cag + k1g) : amp
     icag = gcag * (sinfg ** 2) * (vg - vcag) : amp
     ilg = glg * (vg - vlg) : amp
-    i_extg : amp
-    i_syn_sg : amp
 
-    Hinf_g = 1./(1+exp(-(vg-thetag_g*mV-thetagH_g*mV)/(sigmagH_g*mV))):1
-    ds_gs/dt = alphas * Hinf_g * (1 - s_gs) - betas * s_gs : 1
-    ds_gg/dt = alphag * Hinf_g * (1 - s_gg) - betag * s_gg : 1
-
-    membrane_Im=-(itg+inag+ikg+iahpg+icag+ilg)+i_extg+i_syn_sg:amp
+    membrane_Im =  -(itg + inag + ikg + iahpg + icag + ilg) + i_extg : amp
     dhg/dt = phihg*(hinfg-hg)/tauhg : 1
     dng/dt = phing*(ninfg-ng)/taung : 1
     drg/dt = phig*(rinfg-rg)/taurg  : 1
-    dcag/dt= epsg*((-icag-itg)/pA - kcag*cag) : 1
+    dcag/dt= epsg*((-icag-itg)/pA - kcag*cag) : 1 
 
     dvg/dt = membrane_Im / C : volt
     '''
@@ -106,7 +97,7 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
                                refractory='vg>-20*mV',
                                namespace={**par_g, **par_syn},
                                )
-    
+
     # syn_gs = b2.Synapses(neurons_g, neurons_s, eqs_syn_gs,
     #                      method=par_sim['integration_method'],
     #                      dt=par_sim['dt'],
@@ -114,19 +105,18 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     # cols, rows = np.nonzero(par_syn['adj_gs'])
     # syn_gs.connect(i=rows, j=cols)
     # syn_gs.connect(j='i')
-    
-    syn_sg = b2.Synapses(neurons_s, neurons_g, eqs_syn_sg,
-                         method=par_sim['integration_method'],
-                         dt=par_sim['dt'],
-                         namespace=par_syn)
-    syn_sg.connect(j='i')
+
+    # syn_sg = b2.Synapses(neurons_s, neurons_g, eqs_syn_sg,
+    #                      method=par_sim['integration_method'],
+    #                      dt=par_sim['dt'],
+    #                      namespace=par_syn)
+    # syn_sg.connect(j='i')
 
     # syn_gg = b2.Synapses(neurons_g, neurons_g, eqs_syn_gg,
     #                      method=par_sim['integration_method'],
     #                      dt=par_sim['dt'],
     #                      namespace=par_syn)
     # syn_gg.connect(p=par_syn['p_gg'])
-
 
     neurons_s.vs = par_s['v0']
     neurons_s.h = "hinf"
@@ -152,7 +142,7 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     net = b2.Network(neurons_s)
     net.add(neurons_g)
     # net.add(syn_gs)
-    net.add(syn_sg)
+    # net.add(syn_sg)
     # net.add(syn_gg)
     net.add(st_mon_s)
     net.add(st_mon_g)
@@ -161,7 +151,6 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
 
     net.run(par_sim['simulation_time'])
 
-    
     return st_mon_s, st_mon_g, sp_mon_s, sp_mon_g
 
 
