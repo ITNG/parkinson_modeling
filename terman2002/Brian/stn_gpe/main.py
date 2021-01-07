@@ -118,8 +118,8 @@ par_syn = {
     'betag': 0.08 / b2.ms,
 }
 
-par_s['num'] = 10
-par_g['num'] = 10
+par_s['num'] = 1
+par_g['num'] = 1
 par_s['v0'] = (rand(par_s['num']) * 20 - 10 - 70) * b2.mV
 par_g['v0'] = (rand(par_g['num']) * 20 - 10 - 70) * b2.mV
 
@@ -149,10 +149,10 @@ if __name__ == "__main__":
     start_time = time()
     state = "sparse"
     K = 2
-    G_gs = nx.watts_strogatz_graph(par_s['num'], K, 0, seed=1)
-    A = nx.to_numpy_array(G_gs, dtype=int)
+    # G_gs = nx.watts_strogatz_graph(par_s['num'], K, 0, seed=1)
+    # A = nx.to_numpy_array(G_gs, dtype=int)
     # A = np.asarray([[0, 1],[1, 0]])
-    par_syn['adj_gs'] = A
+    # par_syn['adj_gs'] = A
 
     monitors = simulate_STN_GPe_population(par_s,
                                            par_g,
@@ -160,5 +160,5 @@ if __name__ == "__main__":
                                            par_sim)
 
     print("Done in {}".format(time() - start_time))
-    plot_voltage(monitors, indices=[0, 1], filename="v_{}".format(state))
-    plot_raster(monitors, filename="sp_{}".format(state))
+    plot_voltage(monitors, indices=[0,0], filename="v_{}".format(state))
+    # plot_raster(monitors, filename="sp_{}".format(state))

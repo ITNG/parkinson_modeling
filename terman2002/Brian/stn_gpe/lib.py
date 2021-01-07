@@ -64,12 +64,12 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     ilg = glg * (vg - vlg) : amp
     i_extg : amp
     i_syn_sg : amp
-    i_syn_gg : amp
+
     Hinf_g = 1./(1+exp(-(vg-thetag_g*mV-thetagH_g*mV)/(sigmagH_g*mV))):1
     ds_gs/dt = alphas * Hinf_g * (1 - s_gs) - betas * s_gs : 1
     ds_gg/dt = alphag * Hinf_g * (1 - s_gg) - betag * s_gg : 1
 
-    membrane_Im=-(itg+inag+ikg+iahpg+icag+ilg)+i_extg+i_syn_sg+i_syn_gg:amp
+    membrane_Im=-(itg+inag+ikg+iahpg+icag+ilg)+i_extg+i_syn_sg:amp
     dhg/dt = phihg*(hinfg-hg)/tauhg : 1
     dng/dt = phing*(ninfg-ng)/taung : 1
     drg/dt = phig*(rinfg-rg)/taurg  : 1
@@ -82,7 +82,7 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     i_syn_gs_post = g_gs * s_gs_pre * (v_rev_gs - vs):amp (summed)
     '''
     eqs_syn_sg = '''
-    i_syn_sg_post = g_sg * s_sg_pre * (v_rev_sg - vg):amp (summed)
+    i_syn_sg_post = g_sg * s_sg_pre * (v_rev_sg - vg) : amp (summed)
     '''
     eqs_syn_gg = '''
     i_syn_gg_post = g_gg * s_gg_pre * (v_rev_gg - vg):amp (summed)
@@ -106,13 +106,14 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
                                refractory='vg>-20*mV',
                                namespace={**par_g, **par_syn},
                                )
-    syn_gs = b2.Synapses(neurons_g, neurons_s, eqs_syn_gs,
-                         method=par_sim['integration_method'],
-                         dt=par_sim['dt'],
-                         namespace=par_syn)
-    cols, rows = np.nonzero(par_syn['adj_gs'])
-    syn_gs.connect(i=rows, j=cols)
-    syn_gs.connect(j='i')
+    
+    # syn_gs = b2.Synapses(neurons_g, neurons_s, eqs_syn_gs,
+    #                      method=par_sim['integration_method'],
+    #                      dt=par_sim['dt'],
+    #                      namespace=par_syn)
+    # cols, rows = np.nonzero(par_syn['adj_gs'])
+    # syn_gs.connect(i=rows, j=cols)
+    # syn_gs.connect(j='i')
     
     syn_sg = b2.Synapses(neurons_s, neurons_g, eqs_syn_sg,
                          method=par_sim['integration_method'],
@@ -120,13 +121,11 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
                          namespace=par_syn)
     syn_sg.connect(j='i')
 
-    syn_gg = b2.Synapses(neurons_g, neurons_g, eqs_syn_gg,
-                         method=par_sim['integration_method'],
-                         dt=par_sim['dt'],
-                         namespace=par_syn)
-    syn_gg.connect(p=par_syn['p_gg'])
-
-
+    # syn_gg = b2.Synapses(neurons_g, neurons_g, eqs_syn_gg,
+    #                      method=par_sim['integration_method'],
+    #                      dt=par_sim['dt'],
+    #                      namespace=par_syn)
+    # syn_gg.connect(p=par_syn['p_gg'])
 
 
     neurons_s.vs = par_s['v0']
@@ -152,9 +151,9 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
 
     net = b2.Network(neurons_s)
     net.add(neurons_g)
-    net.add(syn_gs)
+    # net.add(syn_gs)
     net.add(syn_sg)
-    net.add(syn_gg)
+    # net.add(syn_gg)
     net.add(st_mon_s)
     net.add(st_mon_g)
     net.add(sp_mon_s)
@@ -162,10 +161,7 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
 
     net.run(par_sim['simulation_time'])
 
-    # visualise_connectivity(S_gg, join("figs", "S_gg.png"))
-    # visualise_connectivity(S_gs, join("figs", "S_gs.png"))
-    # visualise_connectivity(S_sg, join("figs", "S_sg.png"))
-
+    
     return st_mon_s, st_mon_g, sp_mon_s, sp_mon_g
 
 
@@ -218,3 +214,6 @@ def visualise_connectivity(S, file_name):
 # dsg/dt = alphag * Hinfgg * (1 - sg) - betag * sg : 1 (clock-driven)
 # i_syn_gg_post = w * g_gg * sg * (v_rev_gg - vg) : amp (summed)
 # '''
+# visualise_connectivity(S_gg, join("figs", "S_gg.png"))
+# visualise_connectivity(S_gs, join("figs", "S_gs.png"))
+# visualise_connectivity(S_sg, join("figs", "S_sg.png"))
