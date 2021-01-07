@@ -1,0 +1,55 @@
+import os
+import numpy as np
+import brian2 as b2
+import pylab as plt
+from os.path import join
+
+if not os.path.exists("figs"):
+    os.makedirs("figs")
+
+
+def plot_voltage(monitors, indices, filename):
+    st_mon_s, st_mon_g = monitors[:2]
+
+    fig, ax = plt.subplots(nrows=2, ncols=len(indices), figsize=(15, 4), sharex=True)
+
+    for i in indices:
+        ax[i, 0].plot(st_mon_s.t / b2.ms,
+                    st_mon_s.vs[i] / b2.mV, lw=1, 
+                    label="STN-{:d}".format(i+1), alpha=0.5)
+        ax[i, 0].set_ylabel("STN, v [mV]", fontsize=14)
+        ax[i, 0].legend(frameon=False)
+
+    for i in indices:
+        ax[i, 1].plot(st_mon_g.t / b2.ms,
+                st_mon_g.vg[i] / b2.mV, lw=1, 
+                label="GPe-{:d}".format(i+1), alpha=0.5)
+        ax[i, 1].set_ylabel("GPe, v [mV]", fontsize=14)
+        ax[i, 1].legend(frameon=False)
+
+    
+    ax[0, 0].set_xlim(0, np.max(st_mon_s.t / b2.ms))
+    ax[-1, 0].set_xlabel("time [ms]", fontsize=14)
+    ax[-1, 1].set_xlabel("time [ms]", fontsize=14)
+    
+    plt.tight_layout()
+    plt.savefig(join("figs", '{}.png'.format(filename)))
+    # plt.show()
+
+
+def plot_raster(monitors, filename="spikes"):
+    sp_mon_s, sp_mon_g = monitors[2:]
+    fig, ax = plt.subplots(2, figsize=(9, 4), sharex=True)
+    ax[0].plot(sp_mon_s.t / b2.ms,
+               sp_mon_s.i, "b.",
+               ms=3)
+    ax[1].plot(sp_mon_g.t / b2.ms,
+               sp_mon_g.i, "r.",
+               ms=3)
+
+    ax[1].set_xlabel("time [ms]")
+    ax[0].set_ylabel("STN neuron id")
+    ax[1].set_ylabel("GPe neuron id")
+    plt.tight_layout()
+    plt.savefig(join("figs", '{}.png'.format(filename)))
+    # plt.show()

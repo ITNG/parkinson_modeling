@@ -5,7 +5,9 @@ from time import time
 import networkx as nx
 from numpy.random import rand
 from lib import simulate_STN_GPe_population
-from pl import plot_raster, plot_voltage
+from plotting import plot_raster, plot_voltage
+
+np.random.seed(2)
 
 par_s = {
     # 'v0': -60 * b2.mV,
@@ -13,12 +15,12 @@ par_s = {
     'vna': 55 * b2.mV,
     'vk': -80 * b2.mV,
     'vca': 140 * b2.mV,
-    'gl': 2.25 * b2.msiemens,
-    'gna': 37.5 * b2.msiemens,
-    'gk': 45 * b2.msiemens,
-    'gahp': 9 * b2.msiemens,
-    'gca': 0.5 * b2.msiemens,
-    'gt': 0.5 * b2.msiemens,
+    'gl': 2.25 * b2.nS,
+    'gna': 37.5 * b2.nS,
+    'gk': 45 * b2.nS,
+    'gahp': 9 * b2.nS,
+    'gca': 0.5 * b2.nS,
+    'gt': 0.5 * b2.nS,
     'thetam': -30,
     'thetas': -39,
     'thetah': -39,
@@ -53,8 +55,11 @@ par_s = {
     'k1': 15,
     # 'alpha': 5. / b2.ms,
     # 'beta': 1. / b2.ms,
-    'i_ext': 0 * b2.uamp,
-    'C': 1 * b2.ufarad,
+    'i_ext': 0 * b2.pA,
+    'C': 1 * b2.pF,
+    'thetag_s': 30.,
+    'thetagH_s': -39.,
+    'sigmagH_s': 8.,
 }
 
 par_g = {
@@ -63,12 +68,12 @@ par_g = {
     'vkg': -80. * b2.mV,
     'vcag': 120. * b2.mV,
     'vlg': -55. * b2.mV,
-    'gnag': 120. * b2.msiemens,
-    'gkg': 30. * b2.msiemens,
-    'gahpg': 30. * b2.msiemens,
-    'gtg': .5 * b2.msiemens,
-    'gcag': .1 * b2.msiemens,
-    'glg': .1 * b2.msiemens,
+    'gnag': 120. * b2.nS,
+    'gkg': 30. * b2.nS,
+    'gahpg': 30. * b2.nS,
+    'gtg': .5 * b2.nS,
+    'gcag': .1 * b2.nS,
+    'glg': .1 * b2.nS,
     'taurg': 30. * b2.ms,
     'taun0g': .05 * b2.ms,
     'taun1g': .27*b2.ms,
@@ -96,59 +101,57 @@ par_g = {
     'phing': 0.05,  # Report: 0.1, Terman Rubin 2002: 0.05
     'phihg': 0.05,
     'epsg': 0.0001 / b2.ms,
-    'i_ext': -1.2 * b2.uamp,
-    'C': 1 * b2.ufarad,
+    'i_ext': -1.2 * b2.pA,
+    'C': 1 * b2.pF,
+    'thetag_g': 20.,
+    'thetagH_g': -57.,
+    'sigmagH_g': 2.,
 }
 
 par_syn = {
-    'thetag_s': 30.,
-    'thetag_g': 20.,
-    'thetagH_s': -39.,
-    'thetagH_g': -57.,
-    'sigmagH_s': 8.,
-    'sigmagH_g': 2.,
     'v_rev_gg': -100. * b2.mV,
     'v_rev_sg': 0. * b2.mV,
     'v_rev_gs': -85. * b2.mV,
-    'w_sg': 1,
-    'w_gs': 1,
-    'w_gg': 1,
-    'alpha': 5. / b2.ms,
-    'beta': 1. / b2.ms,
+    'alphas': 5. / b2.ms,
+    'betas': 1. / b2.ms,
     'alphag': 2. / b2.ms,
     'betag': 0.08 / b2.ms,
 }
-par_s['num'] = 100
-par_g['num'] = 100
+
+par_s['num'] = 10
+par_g['num'] = 10
 par_s['v0'] = (rand(par_s['num']) * 20 - 10 - 70) * b2.mV
 par_g['v0'] = (rand(par_g['num']) * 20 - 10 - 70) * b2.mV
 
 
-g_hat_gs = 2.5
-g_hat_sg = 0.03
-g_hat_gg = 0.06
+g_hat_gs = 2.5*b2.nS
+g_hat_sg = 0.03*b2.nS
+g_hat_gg = 0.06*b2.nS
 
 # par_syn['p_sg'] =
-# par_syn['p_gs'] = 3 / par_g['num']
+par_syn['p_gs'] = 3 / par_g['num']
+par_syn['p_sg'] = 1 / par_g['num']
 par_syn['p_gg'] = 1
 
-par_syn['g_gs'] = g_hat_gs * b2.msiemens  # / (par_syn['p_gs'] * par_g['num'])
-par_syn['g_sg'] = g_hat_sg * b2.msiemens  # / (par_syn['p_sg'] * par_s['num'])
-par_syn['g_gg'] = g_hat_gg * b2.msiemens  # / (par_syn['p_gg'] * par_g['num'])
+par_syn['g_gs'] = g_hat_gs  / (par_syn['p_gs'] * par_g['num'])
+par_syn['g_sg'] = g_hat_sg  / (par_syn['p_sg'] * par_s['num'])
+par_syn['g_gg'] = g_hat_gg  / (par_syn['p_gg'] * par_g['num'])
 
 par_sim = {
-    'integration_method': "euler",
+    'integration_method': "rk4",
     'simulation_time': 4000 * b2.ms,
-    'dt': 0.01 * b2.ms,
+    'dt': 0.1 * b2.ms,
 }
 
 
 if __name__ == "__main__":
 
     start_time = time()
+    state = "sparse"
     K = 2
     G_gs = nx.watts_strogatz_graph(par_s['num'], K, 0, seed=1)
     A = nx.to_numpy_array(G_gs, dtype=int)
+    # A = np.asarray([[0, 1],[1, 0]])
     par_syn['adj_gs'] = A
 
     monitors = simulate_STN_GPe_population(par_s,
@@ -157,5 +160,5 @@ if __name__ == "__main__":
                                            par_sim)
 
     print("Done in {}".format(time() - start_time))
-    plot_voltage(monitors, par_s, par_g, par_syn)
-    plot_raster(monitors, par_s, par_g, par_syn)
+    plot_voltage(monitors, indices=[0, 1], filename="v_{}".format(state))
+    plot_raster(monitors, filename="sp_{}".format(state))

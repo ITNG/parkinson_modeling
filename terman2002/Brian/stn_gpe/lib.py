@@ -6,11 +6,13 @@ from os.path import join
 
 def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
 
-    # b2.prefs.codegen.target = 'numpy'
     b2.set_device('cpp_standalone')
+    # b2.prefs.codegen.target = 'numpy'
     # b2.prefs.devices.cpp_standalone.openmp_threads = 4
+
     num_s = par_s['num']
     num_g = par_g['num']
+    b2.defaultclock.dt = par_sim['dt']
 
     eqs_s = '''
     minf = 1/(1+exp(-(vs-thetam*mV)/(sigmam*mV))) : 1
@@ -32,18 +34,18 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     it = gt * ainf ** 3 * binf ** 2 * (vs - vca) : amp 
     i_exts : amp 
     i_syn_gs : amp
+    Hinf_s = 1./(1+exp(-(vs-thetag_s*mV-thetagH_s*mV)/(sigmagH_s*mV))):1
+    ds_sg/dt = alphag * Hinf_s * (1 - s_sg) - betag * s_sg : 1
 
     dh/dt  = phi * (hinf - h) / tauh  : 1
     dn/dt  = phi * (ninf - n) / taun  : 1
     dr/dt  = phir * (rinf - r) / taur : 1
-    dca/dt = eps * ((-ica - it)/uamp - kca* ca) : 1 
-
-    #dss/dt = alpha * 0.5 * (1 + tanh(0.1*vs/mV)) * (1-ss) - beta * ss : 1
-
-    membrane_Im = -(il + ina + ik + it + ica + iahp) + i_exts + i_syn_gs  : amp
-        
+    dca/dt = eps * ((-ica - it)/pA - kca* ca) : 1 
+    
+    membrane_Im = -(il+ina+ik+it+ica+iahp) + i_exts + i_syn_gs:amp
     dvs/dt = membrane_Im/C : volt
     '''
+
     eqs_g = '''
     ainfg = 1 / (1 + exp(-(vg - thetaag*mV) / (sigag*mV))) : 1
     sinfg = 1 / (1 + exp(-(vg - thetasg*mV) / (sigsg*mV))) : 1
@@ -63,25 +65,69 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     i_extg : amp
     i_syn_sg : amp
     i_syn_gg : amp
+    Hinf_g = 1./(1+exp(-(vg-thetag_g*mV-thetagH_g*mV)/(sigmagH_g*mV))):1
+    ds_gs/dt = alphas * Hinf_g * (1 - s_gs) - betas * s_gs : 1
+    ds_gg/dt = alphag * Hinf_g * (1 - s_gg) - betag * s_gg : 1
 
-    membrane_Im =  -(itg+inag+ikg+iahpg+icag+ilg)+i_extg+i_syn_sg + i_syn_gg : amp
+    membrane_Im=-(itg+inag+ikg+iahpg+icag+ilg)+i_extg+i_syn_sg+i_syn_gg:amp
     dhg/dt = phihg*(hinfg-hg)/tauhg : 1
     dng/dt = phing*(ninfg-ng)/taung : 1
     drg/dt = phig*(rinfg-rg)/taurg  : 1
-    dcag/dt= epsg*((-icag-itg)/uamp - kcag*cag) : 1
+    dcag/dt= epsg*((-icag-itg)/pA - kcag*cag) : 1
 
     dvg/dt = membrane_Im / C : volt
     '''
 
+    eqs_syn_gs = '''
+    i_syn_gs_post = g_gs * s_gs_pre * (v_rev_gs - vs):amp (summed)
+    '''
+    eqs_syn_sg = '''
+    i_syn_sg_post = g_sg * s_sg_pre * (v_rev_sg - vg):amp (summed)
+    '''
+    eqs_syn_gg = '''
+    i_syn_gg_post = g_gg * s_gg_pre * (v_rev_gg - vg):amp (summed)
+    '''
+
     #---------------------------------------------------------------#
-    neurons_s = b2.NeuronGroup(num_s,
+    neurons_s = b2.NeuronGroup(par_s['num'],
                                eqs_s,
                                method=par_sim['integration_method'],
                                dt=par_sim['dt'],
                                threshold='vs>-20*mV',
                                refractory='vs>-20*mV',
-                               namespace=par_s,
+                               namespace={**par_s, **par_syn},
                                )
+    #---------------------------------------------------------------#
+    neurons_g = b2.NeuronGroup(par_g['num'],
+                               eqs_g,
+                               method=par_sim['integration_method'],
+                               dt=par_sim['dt'],
+                               threshold='vg>-20*mV',
+                               refractory='vg>-20*mV',
+                               namespace={**par_g, **par_syn},
+                               )
+    syn_gs = b2.Synapses(neurons_g, neurons_s, eqs_syn_gs,
+                         method=par_sim['integration_method'],
+                         dt=par_sim['dt'],
+                         namespace=par_syn)
+    cols, rows = np.nonzero(par_syn['adj_gs'])
+    syn_gs.connect(i=rows, j=cols)
+    syn_gs.connect(j='i')
+    
+    syn_sg = b2.Synapses(neurons_s, neurons_g, eqs_syn_sg,
+                         method=par_sim['integration_method'],
+                         dt=par_sim['dt'],
+                         namespace=par_syn)
+    syn_sg.connect(j='i')
+
+    syn_gg = b2.Synapses(neurons_g, neurons_g, eqs_syn_gg,
+                         method=par_sim['integration_method'],
+                         dt=par_sim['dt'],
+                         namespace=par_syn)
+    syn_gg.connect(p=par_syn['p_gg'])
+
+
+
 
     neurons_s.vs = par_s['v0']
     neurons_s.h = "hinf"
@@ -89,15 +135,6 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     neurons_s.r = "rinf"
     neurons_s.ca = 0
     neurons_s.i_exts = par_s['i_ext']
-    #---------------------------------------------------------------#
-    neurons_g = b2.NeuronGroup(num_g,
-                               eqs_g,
-                               method=par_sim['integration_method'],
-                               dt=par_sim['dt'],
-                               threshold='vg>-20*mV',
-                               refractory='vg>-20*mV',
-                               namespace=par_g,
-                               )
 
     neurons_g.vg = par_g['v0']
     neurons_g.hg = "hinfg"
@@ -106,69 +143,18 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     neurons_g.cag = 0
     neurons_g.i_extg = par_g['i_ext']
 
-    #Synapse equations----------------------------------------------#
-    syn_sg_eqs = '''
-    w : 1
-	Hinfg = 1/(1+exp(-(vg-thetag_s*mV - thetagH_s*mV) / (sigmagH_s*mV))) : 1
-    dss/dt = alpha * Hinfg * (1 - ss) - beta * ss : 1 (clock-driven)
-    i_syn_sg_post = w * g_gs * ss * (v_rev_sg - vg) : amp (summed) 
-    '''
-    syn_gs_eqs = '''
-    w : 1
-    Hinfs = 1/(1+exp(-(vs-thetag_g*mV - thetagH_g*mV)/(sigmagH_g*mV))) : 1
-    dsg/dt = alphag * Hinfs * (1 - sg) - betag * sg : 1 (clock-driven)
-    i_syn_gs_post = w * g_sg * sg * (v_rev_gs - vs) : amp (summed)    
-    '''
-    syn_gg_eqs = '''
-    w : 1
-    Hinfgg = 1/(1+exp(-(vg-thetag_g*mV - thetagH_g*mV)/(sigmagH_g*mV))) : 1
-    dsg/dt = alphag * Hinfgg * (1 - sg) - betag * sg : 1 (clock-driven)
-    i_syn_gg_post = w * g_gg * sg * (v_rev_gg - vg) : amp (summed)    
-    '''
-    #---------------------------------------------------------------#
-
-    S_sg = b2.Synapses(neurons_s,
-                       neurons_g,
-                       syn_sg_eqs,
-                       namespace=par_syn,
-                       method=par_sim['integration_method'])
-    S_sg.connect(j='i')
-    S_sg.w = par_syn['w_sg']
-
-    S_gs = b2.Synapses(neurons_g,
-                       neurons_s,
-                       syn_gs_eqs,
-                       namespace=par_syn,
-                       method=par_sim['integration_method'])
-    # S_gs.connect(p=par_syn['p_gs'])
-    # S_gs.connect(j='k for k in range(i-1, i+2)',
-    #              skip_if_invalid=True)
-    rows, cols = np.nonzero(par_syn['adj_gs'])
-    S_gs.connect(i=rows, j=cols)
-    S_gs.connect(j='i')
-    S_gs.w = par_syn['w_gs']
-
-    S_gg = b2.Synapses(neurons_g,
-                       neurons_g,
-                       syn_gg_eqs,
-                       namespace=par_syn,
-                       method=par_sim['integration_method'])
-    S_gg.connect(p=par_syn['p_gg'], condition='i!=j')
-    S_gg.w = par_syn['w_gg']
     #---------------------------------------------------------------#
 
     st_mon_s = b2.StateMonitor(neurons_s, "vs", record=True)
     st_mon_g = b2.StateMonitor(neurons_g, "vg", record=True)
-
     sp_mon_s = b2.SpikeMonitor(neurons_s)
     sp_mon_g = b2.SpikeMonitor(neurons_g)
 
     net = b2.Network(neurons_s)
     net.add(neurons_g)
-    net.add(S_sg)
-    net.add(S_gs)
-    net.add(S_gg)
-
+    net.add(syn_gs)
+    net.add(syn_sg)
+    net.add(syn_gg)
     net.add(st_mon_s)
     net.add(st_mon_g)
     net.add(sp_mon_s)
@@ -211,3 +197,24 @@ def visualise_connectivity(S, file_name):
 
     plt.savefig(file_name)
     plt.close()
+
+
+#Synapse equations----------------------------------------------#
+# syn_sg_eqs = '''
+# w : 1
+# Hinfg = 1/(1+exp(-(vg-thetag_s*mV - thetagH_s*mV) / (sigmagH_s*mV))) : 1
+# dss/dt = alpha * Hinfg * (1 - ss) - beta * ss : 1 (clock-driven)
+# i_syn_sg_post = w * g_gs * ss * (v_rev_sg - vg) : amp (summed)
+# '''
+# syn_gs_eqs = '''
+# w : 1
+# Hinfs = 1/(1+exp(-(vs-thetag_g*mV - thetagH_g*mV)/(sigmagH_g*mV))) : 1
+# dsg/dt = alphag * Hinfs * (1 - sg) - betag * sg : 1 (clock-driven)
+# i_syn_gs_post = w * g_sg * sg * (v_rev_gs - vs) : amp (summed)
+# '''
+# syn_gg_eqs = '''
+# w : 1
+# Hinfgg = 1/(1+exp(-(vg-thetag_g*mV - thetagH_g*mV)/(sigmagH_g*mV))) : 1
+# dsg/dt = alphag * Hinfgg * (1 - sg) - betag * sg : 1 (clock-driven)
+# i_syn_gg_post = w * g_gg * sg * (v_rev_gg - vg) : amp (summed)
+# '''
