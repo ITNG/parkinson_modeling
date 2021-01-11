@@ -43,11 +43,23 @@ class STN_CELL(object):
 
         self.MODULE_LOADED = par['MODULE_LOADED']
         self.t_simulation = par['t_simulation']
+        self.dt = par['dt']
         self.I_e = par['I_e']
+        self.I_dc = par['I_dc']
+        self.TIstop = par['TIstop']
+        self.TIstart = par['TIstart']
 
-    def simulate_single_stn_cell(self):
-        
-        dt = self.dt
+    # ---------------------------------------------------------------
+
+    def simulate_single_stn_cell(self, **par):
+
+        nest.ResetKernel()
+        nest.SetKernelStatus({
+            "resolution": self.dt})
+
+        self.set_params(**par)
+
+        dt = par['dt']
         t_simulation = self.t_simulation
 
         model = "{}_nestml".format(self.model_name)
@@ -62,6 +74,10 @@ class STN_CELL(object):
         #     print(i, parameters[i])
 
         nest.SetStatus(neuron, {'I_e': self.I_e})
+
+        dc_gen = nest.Create("dc_generator")
+        nest.SetStatus(dc_gen, {"amplitude": self.I_dc,
+                                "start": self.TIstart, "stop": self.TIstop})
 
         multimeter = nest.Create("multimeter")
         nest.SetStatus(multimeter, {"withtime": True,
@@ -100,9 +116,11 @@ class STN_CELL(object):
             nest.SetStatus([neuron], {'V_m': -65.0 + rand() * 10. - 5.})
 
         neuron1, neuron2 = neurons
-        nest.Connect([neuron1], [neuron2], syn_spec={"receptor_type": 1})  # AMPA
+        nest.Connect([neuron1], [neuron2], syn_spec={
+                     "receptor_type": 1})  # AMPA
         # nest.Connect([neuron1], [neuron2], syn_spec={"receptor_type": 2})  # NMDA
-        nest.Connect([neuron1], [neuron2], syn_spec={"receptor_type": 3})  # GABAA
+        nest.Connect([neuron1], [neuron2], syn_spec={
+                     "receptor_type": 3})  # GABAA
         # nest.Connect([neuron1], [neuron2], syn_spec={"receptor_type": 4})  # GABAB
 
         multimeter = nest.Create("multimeter", 2)
@@ -123,7 +141,6 @@ class STN_CELL(object):
         print("firing rate is ", firing_rate/2)
 
         return spikedetector, multimeter
-
 
     def plot_data(self, spikedetector, multimeter,
                   index=[0], filename="single_stn"):
@@ -164,26 +181,46 @@ class STN_CELL(object):
         #     ax[0].axvline(x=i, lw=1., ls="--", color="gray")
 
         plt.savefig(join("../data/", filename+".png"))
+        plt.close()
         # plt.show()
-
-
     
+    @staticmethod
+    def plot_voltages(multimeter, ax, label=None):
+        dmm = nest.GetStatus(multimeter, keys='events')[0]
+        Voltages = dmm["V_m"]
+        tv = dmm["times"]
+        ax.plot(tv, Voltages, lw=1, label=label)
+        ax.margins(x=0)
+        ax.legend()
+
+
 
 if __name__ == "__main__":
 
     par = {'I_e': 0.0,
            't_simulation': 2000.0,
-           'MODULE_LOADED' : False}
+           'MODULE_LOADED': False,
+           'TIstart': 500.0,
+           'TIstop': 800.0,
+           'I_dc': -25.0,
+           'dt':0.01
+           }
 
-    dt = 0.01
 
-    sol = STN_CELL(dt)
+    
+    fig, ax = plt.subplots(4, figsize=(10, 6), sharex=True)
+    sol = STN_CELL(par['dt'])
     sol.set_params(**par)
-    spk, mul = sol.simulate_single_stn_cell()
-    sol.plot_data(spk, mul, index=[0], filename="single_stn")
+    t_stim = [300., 450, 600.]
+    for i in range(len(t_stim)):
+        par['TIstop'] = t_stim[i] + par['TIstart']
+        spk, mul = sol.simulate_single_stn_cell()
+        sol.plot_voltages(mul, ax=ax[i], label=str(t_stim[i]))    
+    plt.savefig("../data/stn.png", dpi=150)
 
-    sol = STN_CELL(dt)
-    par['MODULE_LOADED'] = True
-    sol.set_params(**par)
-    spk, mul = sol.simulate_two_stn_cell()
-    sol.plot_data(spk, mul, index=[0, 1], filename="two_stn")
+
+    # sol = STN_CELL(par['dt])
+    # par['MODULE_LOADED'] = True
+    # sol.set_params(**par)
+    # spk, mul = sol.simulate_two_stn_cell()
+    # sol.plot_data(spk, mul, index=[0, 1], filename="two_stn")
