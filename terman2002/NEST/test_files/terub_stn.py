@@ -37,13 +37,14 @@ class NestSTNExpTest(unittest.TestCase):
         nest_path="/home/abolfazl/prog/nest-build/"
         suffix = '_nestml'
 
-        # to_nest(input_path=input_path,
-        #         target_path=target_path,
-        #         logging_level="INFO",
-        #         suffix=suffix,
-        #         module_name=module_name)
+        if 1:
+            to_nest(input_path=input_path,
+                    target_path=target_path,
+                    logging_level="INFO",
+                    suffix=suffix,
+                    module_name=module_name)
 
-        # install_nest(target_path, nest_path)
+            install_nest(target_path, nest_path)
 
         nest.Install(module_name)
         model = "terub_stn_nestml"

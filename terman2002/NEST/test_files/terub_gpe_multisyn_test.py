@@ -1,5 +1,5 @@
 """
-terub_stn_multisyn_test.py
+terub_gpe_multisyn_test.py
 """
 
 import os
@@ -26,9 +26,9 @@ except:
 
 class NestSTNExpTest(unittest.TestCase):
 
-    def test_terub_stn_multisyn(self):
+    def test_terub_gpe_multisyn(self):
 
-        model_name = "terub_stn_multisyn"
+        model_name = "terub_gpe_multisyn"
 
         if not os.path.exists("target"):
             os.makedirs("target")
@@ -58,9 +58,9 @@ class NestSTNExpTest(unittest.TestCase):
 
         neuron1 = nest.Create(model, 1)
         neuron2 = nest.Create(model, 1)
-        # parameters = nest.GetDefaults(model)
+        parameters = nest.GetDefaults(model)
 
-        # if 0:
+        # if 1:
         #     for i in parameters:
         #         print(i, parameters[i])
 
@@ -68,10 +68,10 @@ class NestSTNExpTest(unittest.TestCase):
             nest.SetStatus([neuron], {'I_e': 0.0 + rand() * 20.0 - 20})
             nest.SetStatus([neuron], {'V_m': -65.0 + rand() * 10. - 5.})
         
-        nest.Connect(neuron1, neuron2, syn_spec={"receptor_type": 1})  # AMPA
-        nest.Connect(neuron1, neuron2, syn_spec={"receptor_type": 2})  # NMDA
+        # nest.Connect(neuron1, neuron2, syn_spec={"receptor_type": 1})  # AMPA
+        # nest.Connect(neuron1, neuron2, syn_spec={"receptor_type": 2})  # NMDA
         nest.Connect(neuron1, neuron2, syn_spec={"receptor_type": 3})  # GABAA
-        nest.Connect(neuron1, neuron2, syn_spec={"receptor_type": 4})  # GABAB
+        # nest.Connect(neuron1, neuron2, syn_spec={"receptor_type": 4})  # GABAB
 
         record_from = ["V_m", "I_syn_ampa", "I_syn_nmda",
                        "I_syn_gaba_a", "I_syn_gaba_b"]
@@ -126,7 +126,7 @@ class NestSTNExpTest(unittest.TestCase):
             ax[0].legend()
 
 
-            plt.savefig(join("resources", "terub_stn_multisyn.png"), dpi=150)
+            plt.savefig(join("resources", "terub_gpe_multisyn.png"), dpi=150)
             plt.show()
 
         plot_data(index=[0, 1])

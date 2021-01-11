@@ -22,7 +22,7 @@ except:
 
 class NestGPeExpTest(unittest.TestCase):
 
-    def test_terub_stn(self):
+    def test_terub_gpe(self):
 
         if not os.path.exists("target"):
             os.makedirs("target")
@@ -30,17 +30,18 @@ class NestGPeExpTest(unittest.TestCase):
         input_path = os.path.join(os.path.realpath(os.path.join(
             os.path.dirname(__file__), "../models", "terub_gpe.nestml")))
         target_path = "target"
-        module_name = 'terub_stn_module'
+        module_name = 'terub_gpe_module'
         nest_path="/home/abolfazl/prog/nest-build/"
         suffix = '_nestml'
 
-        # to_nest(input_path=input_path,
-        #         target_path=target_path,
-        #         logging_level="INFO",
-        #         suffix=suffix,
-        #         module_name=module_name)
+        if 1:
+            to_nest(input_path=input_path,
+                    target_path=target_path,
+                    logging_level="INFO",
+                    suffix=suffix,
+                    module_name=module_name)
 
-        # install_nest(target_path, nest_path)
+            install_nest(target_path, nest_path)
 
         nest.Install(module_name)
         model = "terub_gpe_nestml"

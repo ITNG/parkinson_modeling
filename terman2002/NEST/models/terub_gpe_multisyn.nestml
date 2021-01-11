@@ -1,0 +1,257 @@
+"""
+terub_gpe_multisyn - Terman Rubin neuron model
+#####################################
+
+Description
++++++++++++
+
+terub_gpe is an implementation of a spiking neuron using the Terman Rubin model
+based on the Hodgkin-Huxley formalism.
+
+**Spike Detection:** Spike detection is done by a combined threshold-and-local-maximum search: if there
+  is a local maximum above a certain threshold of the membrane potential, it is considered a spike.
+
+References
+++++++++++
+
+.. [1] Terman, D. and Rubin, J.E. and Yew, A. C. and Wilson, C.J.
+       Activity Patterns in a Model for the Subthalamopallidal Network
+       of the Basal Ganglia
+       The Journal of Neuroscience, 22(7), 2963-2976 (2002)
+
+.. [2] Rubin, J.E. and Terman, D.
+       High Frequency Stimulation of the Subthalamic Nucleus Eliminates
+       Pathological Thalamic Rhythmicity in a Computational Model
+       Journal of Computational Neuroscience, 16, 211-235 (2004)
+
+Author
+++++++
+
+
+"""
+neuron terub_gpe_multisyn:
+  state:
+    r integer # counts number of tick during the refractory period
+  end
+
+  initial_values:
+    V_m mV = E_L #  Membrane potential
+
+    gate_h     real = 0.0 # gating variable h
+    gate_n     real = 0.0 # gating variable n
+    gate_r     real = 0.0 # gating variable r
+    Ca_con     real = 0.0 # gating variable r
+
+    g_AMPA nS = 0.0 nS
+    g_AMPA' nS/ms = 0.0 nS/ms
+
+    g_NMDA nS = 0.0 nS 
+    g_NMDA' nS/ms = 0.0 nS/ms 
+
+    g_GABAA nS = 0.0 nS
+    g_GABAA' nS/ms = 0.0 nS/ms
+    
+    g_GABAB nS = 0.0 nS 
+    g_GABAB' nS/ms = 0.0 nS/ms
+
+  end
+
+  equations:
+    recordable function I_syn_ampa pA = -g_AMPA * ( V_m - AMPA_E_rev )
+    recordable function I_syn_nmda pA = -g_NMDA * ( V_m - NMDA_E_rev ) / ( 1 + exp( ( NMDA_Vact - V_m ) / NMDA_Sact ) )
+    recordable function I_syn_gaba_a pA = -g_GABAA * ( V_m - GABA_A_E_rev )
+    recordable function I_syn_gaba_b pA = -g_GABAB * ( V_m - GABA_B_E_rev )
+    recordable function I_syn pA = I_syn_ampa + I_syn_nmda + I_syn_gaba_a + I_syn_gaba_b  
+
+    # Parameters for Terman Rubin GPe Neuron
+    function g_tau_n_0 ms = 0.05 ms
+    function g_tau_n_1 ms = 0.27 ms
+    function g_theta_n_tau mV = -40.0 mV
+    function g_sigma_n_tau mV = -12.0 mV
+
+    function g_tau_h_0 ms = 0.05 ms
+    function g_tau_h_1 ms = 0.27 ms
+    function g_theta_h_tau mV = -40.0 mV
+    function g_sigma_h_tau mV = -12.0 mV
+    function g_tau_r ms = 30.0 ms
+
+    # steady state values for gating variables
+    function g_theta_a mV = -57.0 mV
+    function g_sigma_a mV =  2.0 mV
+    function g_theta_h mV = -58.0 mV
+    function g_sigma_h mV = -12.0 mV
+    function g_theta_m mV = -37.0 mV
+    function g_sigma_m mV = 10.0 mV
+    function g_theta_n mV = -50.0 mV
+    function g_sigma_n mV = 14.0 mV
+    function g_theta_r mV = -70.0 mV
+    function g_sigma_r mV = -2.0 mV
+    function g_theta_s mV = -35.0 mV
+    function g_sigma_s mV = 2.0 mV
+
+    # time evolvement of gating variables
+    function g_phi_h real =  0.05
+    function g_phi_n real =  0.1 #Report: 0.1, Terman Rubin 2002: 0.05
+    function g_phi_r real = 1.0
+
+    # Calcium concentration and afterhyperpolarization current
+    function g_epsilon 1/ms =  0.0001 /ms
+    function g_k_Ca real = 15.0 #Report:15,  Terman Rubin 2002: 20.0
+    function g_k1 real = 30.0
+
+    #function I_ex_mod real = -convolve(g_ex, spikeExc) * V_m
+    #function I_in_mod real = convolve(g_in, spikeInh) * (V_m-E_gg)
+
+    function tau_n real = g_tau_n_0 + g_tau_n_1 / (1. + exp(-(V_m-g_theta_n_tau)/g_sigma_n_tau))
+    function tau_h real = g_tau_h_0 + g_tau_h_1 / (1. + exp(-(V_m-g_theta_h_tau)/g_sigma_h_tau))
+    function tau_r real = g_tau_r
+
+    function a_inf real = 1. / (1. + exp(-(V_m-g_theta_a)/g_sigma_a))
+    function h_inf real = 1. / (1. + exp(-(V_m-g_theta_h)/g_sigma_h))
+    function m_inf real = 1. / (1. + exp(-(V_m-g_theta_m)/g_sigma_m))
+    function n_inf real = 1. / (1. + exp(-(V_m-g_theta_n)/g_sigma_n))
+    function r_inf real = 1. / (1. + exp(-(V_m-g_theta_r)/g_sigma_r))
+    function s_inf real = 1. / (1. + exp(-(V_m-g_theta_s)/g_sigma_s))
+
+    function I_Na  real =  g_Na  * m_inf * m_inf * m_inf * gate_h    * (V_m - E_Na)
+    function I_K   real =  g_K   * gate_n * gate_n * gate_n * gate_n * (V_m - E_K )
+    function I_L   real =  g_L                                       * (V_m - E_L )
+    function I_T   real =  g_T   * a_inf* a_inf * a_inf * gate_r     * (V_m - E_Ca)
+    function I_Ca  real =  g_Ca  * s_inf * s_inf                     * (V_m - E_Ca)
+    function I_ahp real =  g_ahp * (Ca_con / (Ca_con + g_k1))        * (V_m - E_K )
+
+    # synapses: alpha functions
+    ## alpha function for the g_in
+    #shape g_in = (e/tau_syn_in) * t * exp(-t/tau_syn_in)
+    ## alpha function for the g_ex
+    #shape g_ex = (e/tau_syn_ex) * t * exp(-t/tau_syn_ex)
+
+    # V dot -- synaptic input are currents, inhib current is negative
+    V_m' = ( -(I_Na + I_K + I_L + I_T + I_Ca + I_ahp) * pA + I_e + I_stim + I_syn) / C_m  # I_ex_mod * pA + I_in_mod * pA
+
+    # channel dynamics
+    gate_h' = g_phi_h *((h_inf-gate_h) / tau_h) / ms # h-variable
+    gate_n' = g_phi_n *((n_inf-gate_n) / tau_n) / ms # n-variable
+    gate_r' = g_phi_r *((r_inf-gate_r) / tau_r) / ms # r-variable
+
+    # Calcium concentration
+    Ca_con' = g_epsilon*(-I_Ca - I_T - g_k_Ca * Ca_con)
+
+    #############
+    # Synapses
+    #############
+    
+    g_AMPA'' = -g_AMPA' / AMPA_Tau_1
+    g_AMPA' = g_AMPA' - g_AMPA  / AMPA_Tau_2
+
+    g_NMDA'' = -g_NMDA' / NMDA_Tau_1
+    g_NMDA' = g_NMDA' - g_NMDA / NMDA_Tau_2
+
+    g_GABAA'' = -g_GABAA' / GABA_A_Tau_1
+    g_GABAA' = g_GABAA' - g_GABAA / GABA_A_Tau_2
+
+    g_GABAB'' = -g_GABAB' / GABA_B_Tau_1
+    g_GABAB' = g_GABAB' - g_GABAB /GABA_B_Tau_2
+
+  end
+
+  parameters:
+    E_L        mV = -55 mV  # Resting membrane potential.
+    g_L        nS = 0.1 nS  # Leak conductance.
+    C_m        pF = 1.0 pF # Capacity of the membrane.
+    E_Na       mV = 55 mV   # Sodium reversal potential.
+    g_Na       nS = 120 nS # Sodium peak conductance.
+    E_K        mV = -80.0 mV# Potassium reversal potential.
+    g_K        nS = 30.0 nS # Potassium peak conductance.
+    E_Ca       mV = 120 mV  # Calcium reversal potential.
+    g_Ca       nS = 0.15 nS # Calcium peak conductance.
+    g_T        nS = 0.5 nS  # T-type Calcium channel peak conductance.
+    g_ahp      nS = 30 nS   # afterpolarization current peak conductance.
+    #tau_syn_ex ms = 1.0 ms  # Rise time of the excitatory synaptic alpha function.
+    #tau_syn_in ms = 12.5 ms # Rise time of the inhibitory synaptic alpha function.
+    #E_gg       mV = -100 mV # reversal potential for inhibitory input (from GPe)
+    t_ref      ms = 2 ms    # refractory time
+
+    # Parameters for synapse of type AMPA, GABA_A, GABA_B and NMDA
+    AMPA_g_peak nS = 0.1 nS      # peak conductance
+    AMPA_E_rev mV = 0.0 mV       # reversal potential
+    AMPA_Tau_1 ms = 0.5 ms       # rise time
+    AMPA_Tau_2 ms = 2.4 ms       # decay time, Tau_1 < Tau_2
+    
+    NMDA_g_peak nS = 0.075 nS    # peak conductance
+    NMDA_Tau_1 ms = 4.0 ms       # rise time
+    NMDA_Tau_2 ms = 40.0 ms      # decay time, Tau_1 < Tau_2
+    NMDA_E_rev mV = 0.0 mV       # reversal potential
+    NMDA_Vact mV = -58.0 mV      # inactive for V << Vact, inflection of sigmoid
+    NMDA_Sact mV = 2.5 mV        # scale of inactivation
+    
+    GABA_A_g_peak nS = 0.33 nS   # peak conductance
+    GABA_A_Tau_1 ms = 1.0 ms     # rise time
+    GABA_A_Tau_2 ms = 7.0 ms     # decay time, Tau_1 < Tau_2
+    GABA_A_E_rev mV = -70.0 mV   # reversal potential
+    
+    GABA_B_g_peak nS = 0.0132 nS # peak conductance
+    GABA_B_Tau_1 ms = 60.0 ms    # rise time
+    GABA_B_Tau_2 ms = 200.0 ms   # decay time, Tau_1 < Tau_2
+    GABA_B_E_rev mV = -90.0 mV   # reversal potential for intrinsic current
+
+
+    # constant external input current
+    I_e pA = 0 pA
+  end
+
+  internals:
+    refractory_counts integer = steps(t_ref)
+    AMPAInitialValue real = compute_synapse_constant( AMPA_Tau_1, AMPA_Tau_2, AMPA_g_peak )
+    NMDAInitialValue real = compute_synapse_constant( NMDA_Tau_1, NMDA_Tau_2, NMDA_g_peak )
+    GABA_AInitialValue real = compute_synapse_constant( GABA_A_Tau_1, GABA_A_Tau_2, GABA_A_g_peak )
+    GABA_BInitialValue real = compute_synapse_constant( GABA_B_Tau_1, GABA_B_Tau_2, GABA_B_g_peak )
+  end
+
+  input:
+    #spikeInh nS <- inhibitory spike
+    #spikeExc nS <- excitatory spike
+    #I_stim pA <- current
+    AMPA nS  <- spike
+    NMDA nS  <- spike
+    GABA_A nS <- spike
+    GABA_B nS <- spike
+    I_stim pA <- current
+  end
+
+  output: spike
+
+  update:
+    U_old mV = V_m
+    integrate_odes()
+
+    g_AMPA' += AMPAInitialValue * AMPA /ms
+    g_NMDA' += NMDAInitialValue * NMDA /ms
+    g_GABAA' += GABA_AInitialValue * GABA_A /ms
+    g_GABAB' += GABA_BInitialValue * GABA_B /ms
+
+    # sending spikes: crossing 0 mV, pseudo-refractoriness and local maximum...
+    if r > 0:
+      r -= 1
+    elif V_m > 0 mV and U_old > V_m:
+      r = refractory_counts
+      emit_spike()
+    end
+
+  end
+
+  function compute_synapse_constant(Tau_1 ms, Tau_2 ms, g_peak real) real:
+    # Factor used to account for the missing 1/((1/Tau_2)-(1/Tau_1)) term
+    # in the ht_neuron_dynamics integration of the synapse terms.
+    # See: Exact digital simulation of time-invariant linear systems
+    # with applications to neuronal modeling, Rotter and Diesmann,
+    # section 3.1.2.
+    exact_integration_adjustment real = ( ( 1 / Tau_2 ) - ( 1 / Tau_1 ) ) * ms
+
+    t_peak real = ( Tau_2 * Tau_1 ) * ln( Tau_2 / Tau_1 ) / ( Tau_2 - Tau_1 ) / ms
+    normalisation_factor real = 1 / ( exp( -t_peak / Tau_1 ) - exp( -t_peak / Tau_2 ) )
+
+    return g_peak * normalisation_factor * exact_integration_adjustment
+  end
+
+end
