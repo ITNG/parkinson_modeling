@@ -9,7 +9,7 @@ from numpy.random import rand
 np.random.seed(5)
 
 
-class STN_CELL(object):
+class GPe_CELL(object):
 
     data_path = "../data/"
     BUILT = False       # True, if build() was called
@@ -17,7 +17,7 @@ class STN_CELL(object):
     nthreads = 1
     MODULE_LOADED = False
 
-    model_name = "terub_stn_multisyn"
+    model_name = "terub_gpe_multisyn"
     module_name = '{}_module'.format(model_name)
 
     record_from = ["V_m", "I_syn_ampa", "I_syn_nmda",
@@ -43,7 +43,7 @@ class STN_CELL(object):
             "data_path": self.data_path,
             "local_num_threads": self.nthreads})
 
-    def set_params(self, par):
+    def set_params(self, **par):
 
         self.MODULE_LOADED = par['MODULE_LOADED']
         self.t_simulation = par['t_simulation']
@@ -56,31 +56,30 @@ class STN_CELL(object):
 
     # ---------------------------------------------------------------
 
-    def simulate_two_stn_cell(self):
+    def simulate_two_gpe_cell(self):
 
         if self.state == "Te2002":
             dict_ter2002 = {
-                'tau_r_0': 40.,
-                'theta_b': 0.4,
-                'sigma_b': -0.1,
-                'phi_r': 0.2,
-                'epsilon': 3.75e-5,
+                'g_phi_n': 0.05,
+                'g_k_Ca': 20.,
             }
             nest.SetDefaults(self.model, dict_ter2002)
 
         neurons = nest.Create(self.model, 2)
 
         for neuron in neurons:
-            nest.SetStatus([neuron], {'I_e': 0.0 + rand() * 10.0 - 5.5})
+            nest.SetStatus([neuron], {'I_e': 0.0 + rand() * 1.0 - 0.5})
             nest.SetStatus([neuron], {'V_m': -65.0 + rand() * 10. - 5.})
 
         neuron1, neuron2 = neurons
-        nest.Connect([neuron1], [neuron2], syn_spec={
-                     "receptor_type": 1, 'weight':1.0, 'delay': 1.0})  # AMPA
-        # nest.Connect([neuron1], [neuron2], syn_spec={"receptor_type": 2})  # NMDA
-        nest.Connect([neuron1], [neuron2], syn_spec={
-                     "receptor_type": 3})  # GABAA
-        # nest.Connect([neuron1], [neuron2], syn_spec={"receptor_type": 4})  # GABAB
+        # nest.Connect([neuron1], [neuron2],
+        #              syn_spec={"receptor_type": 1})  # AMPA
+        # nest.Connect([neuron1], [neuron2],
+        #              syn_spec={"receptor_type": 2})  # NMDA
+        nest.Connect([neuron1], [neuron2],
+                     syn_spec={"receptor_type": 3})  # GABAA
+        # nest.Connect([neuron1], [neuron2],
+        #              syn_spec={"receptor_type": 4})  # GABAB
 
         multimeter = nest.Create("multimeter", 2)
         nest.SetStatus(multimeter, {"withtime": True,
@@ -102,7 +101,7 @@ class STN_CELL(object):
         return spikedetector, multimeter
 
     def plot_data(self, spikedetector, multimeter,
-                  index=[0], filename="single_stn"):
+                  index=[0], filename="single_gpe"):
 
         _, ax = plt.subplots(3, figsize=(8, 4), sharex=True)
 
@@ -155,11 +154,9 @@ if __name__ == "__main__":
            #    "state": "TeRu2004",
            "state": "Te2002",
            }
-    alpha = 5.0
-    beta = 1
 
-    sol = STN_CELL(par['dt'])
+    sol = GPe_CELL(par['dt'])
     par['MODULE_LOADED'] = True
-    sol.set_params(par)
-    spk, mul = sol.simulate_two_stn_cell()
-    sol.plot_data(spk, mul, index=[0, 1], filename="two_stn")
+    sol.set_params(**par)
+    spk, mul = sol.simulate_two_gpe_cell()
+    sol.plot_data(spk, mul, index=[0, 1], filename="two_gpe")
