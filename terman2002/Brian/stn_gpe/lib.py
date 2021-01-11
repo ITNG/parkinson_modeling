@@ -165,7 +165,7 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
                          method=par_sim['integration_method'],
                          dt=par_sim['dt'],
                          namespace=par_syn)
-    syn_gg.connect(condition='i!=j', p=par_syn['p_gg'])
+    syn_gg.connect(p=par_syn['p_gg'])
 
     neurons_s.vs = par_s['v0']
     neurons_s.h = "hinf"

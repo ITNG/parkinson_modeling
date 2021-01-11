@@ -74,7 +74,7 @@ neuron terub_stn_multisyn:
     function theta_h_tau mV = -57.0 mV
     function sigma_h_tau mV = -3.0 mV
 
-    function tau_r_0 ms = 7.1 ms # Guo 7.1 Terman02 40.0
+    #function tau_r_0 ms = 7.1 ms # Guo 7.1 Terman02 40.0
     function tau_r_1 ms = 17.5 ms
     function theta_r_tau mV = 68.0 mV
     function sigma_r_tau mV = -2.2 mV
@@ -93,16 +93,16 @@ neuron terub_stn_multisyn:
     function theta_s mV = -39.0 mV
     function sigma_s mV = 8.0 mV
 
-    function theta_b real = 0.25 # Guo 0.25 Terman02 0.4
-    function sigma_b real = 0.07 # Guo 0.07 Terman02 -0.1
+    #function theta_b real = 0.25 # Guo 0.25 Terman02 0.4
+    #function sigma_b real = 0.07 # Guo 0.07 Terman02 -0.1
 
     #time evolvement of gating variables
     function phi_h real = 0.75
     function phi_n real = 0.75
-    function phi_r real = 0.5 # Guo 0.5 Terman02 0.2
+    # function phi_r real = 0.5 # Guo 0.5 Terman02 0.2
 
     # Calcium concentration and afterhyperpolarization current
-    function epsilon 1/ms = 0.00005 / ms # 1/ms Guo 0.00005 Terman02 0.0000375
+    #function epsilon 1/ms = 0.00005 / ms # 1/ms Guo 0.00005 Terman02 0.0000375
     function k_Ca real = 22.5
     function k1 real = 15.0
 
@@ -137,7 +137,7 @@ neuron terub_stn_multisyn:
     gate_r' = phi_r *((r_inf-gate_r) / tau_r)  # r-variable
 
     #Calcium concentration
-    Ca_con' = epsilon*( (-I_Ca  - I_T ) / pA - k_Ca * Ca_con)
+    Ca_con' = epsilon/ms *( (-I_Ca  - I_T ) / pA - k_Ca * Ca_con)
 
     #############
     # Synapses
@@ -177,6 +177,13 @@ neuron terub_stn_multisyn:
     # tau_syn_in ms = 0.08 ms # Rise time of the inhibitory synaptic alpha function.
     E_gs       mV = -85.0 mV# reversal potential for inhibitory input (from GPe)
     t_ref      ms = 2. ms    # refractory time
+
+
+    phi_r real = 0.5 # Guo 0.5 Terman02 0.2
+    tau_r_0 ms = 7.1 ms # Guo 7.1 Terman02 40.0
+    theta_b real = 0.25 # Guo 0.25 Terman02 0.4
+    sigma_b real = 0.07 # Guo 0.07 Terman02 -0.1
+    epsilon real = 0.00005  # 1/ms Guo 0.00005 Terman02 0.0000375
 
     # Parameters for synapse of type AMPA, GABA_A, GABA_B and NMDA
     AMPA_g_peak nS = 0.1 nS      # peak conductance
