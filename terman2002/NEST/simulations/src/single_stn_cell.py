@@ -130,17 +130,17 @@ if __name__ == "__main__":
            "state": "Te2002",
            }
 
-    fig, ax = plt.subplots(3, figsize=(8, 5), sharex=True)
-    sol = STN_CELL(par['dt'])
-    t_stim = [300.0, 450.0, 600.0]
-    for i in range(len(t_stim)):
-        par['TIstop'] = t_stim[i] + par['TIstart']
-        sol.set_params(**par)
-        mul = sol.simulate_single_stn_cell()
-        sol.plot_voltages(mul, ax=ax[i], label=str(t_stim[i]))
-    plt.savefig("../data/stn1-{}.png".format(par['state']), dpi=150)
+    # fig, ax = plt.subplots(3, figsize=(8, 5), sharex=True)
+    # sol = STN_CELL(par['dt'])
+    # t_stim = [300.0, 450.0, 600.0]
+    # for i in range(len(t_stim)):
+    #     par['TIstop'] = t_stim[i] + par['TIstart']
+    #     sol.set_params(**par)
+    #     mul = sol.simulate_single_stn_cell()
+    #     sol.plot_voltages(mul, ax=ax[i], label=str(t_stim[i]))
+    # plt.savefig("../data/results/stn1-{}.png".format(par['state']), dpi=150)
 
-    exit(0)
+    # exit(0)
 
     fig, ax = plt.subplots(3, figsize=(8, 5), sharex=True)
     sol = STN_CELL(par['dt'])
@@ -150,7 +150,7 @@ if __name__ == "__main__":
         sol.set_params(**par)
         mul = sol.simulate_single_stn_cell()
         sol.plot_voltages(mul, ax=ax[i], label=str(i_stim[i]))
-    plt.savefig("../data/stn2-{}.png".format(par['state']), dpi=150)
+    plt.savefig("../data/results/stn2-{}.png".format(par['state']), dpi=150)
 
 
     # sol = STN_CELL(par['dt])

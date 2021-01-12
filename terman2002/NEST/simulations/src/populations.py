@@ -3,6 +3,7 @@ import nest
 import time
 import numpy as np
 import pylab as plt
+from sys import argv
 from os.path import join
 from copy import deepcopy
 from numpy.random import rand
@@ -22,13 +23,12 @@ class TER_RUB():
     data_path = "../data/"
     BUILT = False       # True, if build() was called
     CONNECTED = False   # True, if connect() was called
-    nthreads = 1
     stn_model_name = "terub_stn_multisyn_nestml"
     gpe_model_name = "terub_gpe_multisyn_nestml"
 
     # ---------------------------------------------------------------
 
-    def __init__(self, dt):
+    def __init__(self, dt, nthreads=1):
 
         self.name = self.__class__.__name__
         nest.ResetKernel()
@@ -47,7 +47,7 @@ class TER_RUB():
             "print_time": False,
             "overwrite_files": True,
             "data_path": self.data_path,
-            "local_num_threads": self.nthreads})
+            "local_num_threads": nthreads})
 
         np.random.seed(2)
 
@@ -98,8 +98,15 @@ class TER_RUB():
             nest.SetDefaults(self.stn_model_name, dict_default_stn)
             nest.SetDefaults(self.gpe_model_name, dict_default_gpe)
 
-        nest.CopyModel(self.stn_model_name, "STN_model", self.par_syn_common)
-        nest.CopyModel(self.gpe_model_name, "GPe_model", self.par_syn_common)
+            nest.CopyModel(self.stn_model_name, "STN_model", {
+                           **self.par_syn_common, **dict_default_stn})
+            nest.CopyModel(self.gpe_model_name, "GPe_model", {
+                           **self.par_syn_common, **dict_default_gpe})
+        else:
+            nest.CopyModel(self.stn_model_name,
+                           "STN_model", self.par_syn_common)
+            nest.CopyModel(self.gpe_model_name,
+                           "GPe_model", self.par_syn_common)
 
         self.stn_cells = nest.Create("STN_model", n_stn)
         self.gpe_cells = nest.Create("GPe_model", n_gpe)
@@ -111,7 +118,10 @@ class TER_RUB():
                        for ni in node_info if ni['local']]
         for gid, vp in local_nodes:
             nest.SetStatus(
-                [gid], {'V_m': self.pyrngs[vp].uniform(-stn_V_thr, stn_V_thr)})
+                [gid], {'V_m': self.pyrngs[vp].uniform(-stn_V_thr, stn_V_thr),
+                        'I_e': par_simulation["I_e"]})
+        
+        # print(nest.GetStatus([self.stn_cells[0]], "I_e"))
 
         self.stn_multimeter = nest.Create("multimeter", n_stn)
         self.gpe_multimeter = nest.Create("multimeter", n_gpe)
@@ -282,82 +292,76 @@ if __name__ == "__main__":
     }
 
     par_simulation = {
-        "dt": 0.5,
+        "dt": 0.2,
         'state': "Te2002",
-        't_transition': 100.,
-        't_simulation': 2000.,
+        "nthreads": 1,
+        "I_e": -0.5,
+        't_transition': 500.,
+        't_simulation': 1500.,
         'n_stn': 10,
         'n_gpe': 10,
     }
 
-    par_syn_GtoS = {'delay': 1.0, 'weight': 3.0}
+    par_syn_GtoS = {'delay': 1.0, 'weight': 1.0}
     par_syn_StoG = {'delay': 1.0, 'weight': 0.03}
     par_syn_GtoG = {'delay': 1.0, 'weight': 0.06}
 
-    start_time = time.time()
-    install_modules()
-
-
-    def run_command(args):
-
-        sol = TER_RUB(par_simulation['dt'])
-        sol.set_params(args)
-        sol.build()
-        sol.connect()
-        sol.run()
-        i = args['par_syn_StoG']['weight']
-        j = args['par_syn_GtoS']['weight']
-        sub_name = "{:.6f}-{:.6f}".format(i, j)
-        sol.plot_voltages(filename="v-"+sub_name)
-        
-        del sol
-
-    def batch_run(n_jobs):
-
-        args = []  # list of dictionary of dictionaries
-        for i in range(len(g_StoG)):
-            for j in range(len(g_GtoG)):
-                par_syn_StoG['weight'] = g_StoG[i]
-                par_syn_GtoG['weight'] = g_GtoG[j]
-                tmp = {
-                    "par_syn_StoG": par_syn_StoG,
-                    "par_syn_GtoS": par_syn_GtoS,
-                    "par_syn_GtoG": par_syn_GtoG,
-                }
-                args.append(deepcopy(tmp))
-        
-        Parallel(n_jobs=n_jobs)(map(delayed(run_command), args))
-
-
-    g_StoG = np.linspace(0.01, 2.0, 3)
-    g_GtoG = np.linspace(0.01, 2.0, 3)
-    batch_run(2)
-
-    exit(0)
-
-    # serial running
     params = {
         "par_syn_StoG": par_syn_StoG,
         "par_syn_GtoS": par_syn_GtoS,
         "par_syn_GtoG": par_syn_GtoG,
     }
 
-    for i in range(len(g_StoG)):
-        for j in range(len(g_GtoG)):
+    run_in_serial = 0
+    run_from_terminal = 1
 
-            sub_name = "{:.6f}-{:.6f}".format(g_StoG[i], g_GtoG[j])
+    # ---------------------------------------------------------------
+    if run_from_terminal:
 
-            sol = TER_RUB(par_simulation['dt'])
-            
-            # these update the params as well by reference
-            par_syn_StoG['weight'] = g_StoG[i]
-            par_syn_GtoG['weight'] = g_GtoG[j]
+        install_modules()
 
-            sol.set_params(params)
-            sol.build()
-            sol.connect()
-            sol.run()
-            # sol.plot_raster(filename="s-"+sub_name)
-            sol.plot_voltages(filename="v-"+sub_name)
+        # these update the params as well by reference
+        par_syn_StoG['weight'] = float(argv[1])
+        par_syn_GtoG['weight'] = float(argv[2])
 
-    display_time(time.time() - start_time)
+        sub_name = "{:.6f}-{:.6f}".format(
+            par_syn_StoG['weight'], par_syn_GtoG['weight'])
+        sol = TER_RUB(par_simulation['dt'])
+        sol.set_params(params)
+        sol.build()
+        sol.connect()
+        sol.run()
+        # sol.plot_raster(filename="s-"+sub_name)
+        sol.plot_voltages(filename="v-"+sub_name)
+        del sol
+
+    # ---------------------------------------------------------------
+    if run_in_serial:
+
+        start_time = time.time()
+
+        g_StoG = np.linspace(0.01, 2.0, 3)
+        g_GtoG = np.linspace(0.01, 2.0, 3)
+
+        # serial running parallel with threads
+        install_modules()
+
+        for i in range(len(g_StoG)):
+            for j in range(len(g_GtoG)):
+
+                sub_name = "{:.6f}-{:.6f}".format(g_StoG[i], g_GtoG[j])
+
+                sol = TER_RUB(par_simulation['dt'])
+
+                # these update the params as well by reference
+                par_syn_StoG['weight'] = g_StoG[i]
+                par_syn_GtoG['weight'] = g_GtoG[j]
+
+                sol.set_params(params)
+                sol.build()
+                sol.connect()
+                sol.run()
+                # sol.plot_raster(filename="s-"+sub_name)
+                sol.plot_voltages(filename="v-"+sub_name)
+
+        display_time(time.time() - start_time)
