@@ -8,19 +8,22 @@ from numpy.random import rand
 np.random.seed(5)
 
 
-class TeRub2004():
+def install_modules():
+    stn_module_name = 'terub_stn_multisyn_module'
+    gpe_module_name = 'terub_gpe_multisyn_module'
+    nest.Install(stn_module_name)
+    nest.Install(gpe_module_name)
+
+
+class TER_RUB():
 
     data_path = "../data/"
     BUILT = False       # True, if build() was called
     CONNECTED = False   # True, if connect() was called
     nthreads = 1
+    stn_model_name = "terub_stn_multisyn_nestml"
+    gpe_model_name = "terub_gpe_multisyn_nestml"
 
-    stn_model_subname = "terub_stn_multisyn"
-    gpe_model_subname = "terub_gpe_multisyn"
-    stn_model_name = "{}_nestml".format(stn_model_subname)
-    gpe_model_name = "{}_nestml".format(gpe_model_subname)
-    stn_module_name = '{}_module'.format(stn_model_subname)
-    gpe_module_name = '{}_module'.format(gpe_model_subname)
     # ---------------------------------------------------------------
 
     def __init__(self, dt):
@@ -29,11 +32,6 @@ class TeRub2004():
         nest.ResetKernel()
         nest.set_verbosity('M_QUIET')
         self.dt = dt
-
-        # self.stn_model = "{}_nestml".format(self.stn_model_name)
-        # self.gpe_model = "{}_nestml".format(self.gpe_model_name)
-        nest.Install(self.stn_module_name)
-        nest.Install(self.gpe_module_name)
 
         # parameters = nest.GetDefaults(self.stn_model_name)
         # for i in parameters:
@@ -48,6 +46,8 @@ class TeRub2004():
             "overwrite_files": True,
             "data_path": self.data_path,
             "local_num_threads": self.nthreads})
+
+        np.random.seed(2)
 
         # Create and seed RNGs
         master_seed = 1000      # master seed
@@ -84,16 +84,16 @@ class TeRub2004():
         n_gpe = self.par_simulation['n_gpe']
 
         if self.state == "Te2002":
-            dict_default_gpe = {
-                'g_phi_n': 0.05,
-                'g_k_Ca': 20.
-            }
             dict_default_stn = {
                 'tau_r_0': 40.,
                 'theta_b': 0.4,
                 'sigma_b': -0.1,
                 'phi_r': 0.2,
                 'epsilon': 3.75e-5,
+            }
+            dict_default_gpe = {
+                'g_phi_n': 0.05,
+                'g_k_Ca': 20.
             }
             nest.SetDefaults(self.stn_model_name, dict_default_stn)
             nest.SetDefaults(self.gpe_model_name, dict_default_gpe)
@@ -171,6 +171,14 @@ class TeRub2004():
         nest.Connect(self.stn_cells, self.stn_spikedetector)
         nest.Connect(self.gpe_cells, self.gpe_spikedetector)
 
+
+        ## printing the connections
+        # for i in self.gpe_cells[:2]:
+        #     conn = nest.GetConnections([i])
+        #     print(nest.GetStatus(conn, ['source', 'target']))
+        # print("---------------------------------------------")
+
+
         self.CONNECTED = True
     # ---------------------------------------------------------------
 
@@ -223,7 +231,7 @@ class TeRub2004():
         for i in range(nrows):
             ax[i][0].set_ylabel("voltage [mV]")
 
-        plt.savefig(join("../data/", filename+".png"), dpi=150)
+        plt.savefig(join(self.data_path, "figs", filename+".png"), dpi=150)
         plt.close()
     # ---------------------------------------------------------------
 
@@ -243,7 +251,7 @@ class TeRub2004():
 
         ax.set_ylabel("Spikes")
         ax.set_xlabel("Times [ms]")
-        plt.savefig(join("../data/", filename+".png"), dpi=150)
+        plt.savefig(join(self.data_path, "figs", filename+".png"), dpi=150)
         plt.close()
 
 
@@ -266,33 +274,42 @@ par_gpe = {
     "GABA_B_E_rev": -100.0,
 }
 
-par_syn_GS = {'delay': 1.0,
-              'weight': 1.0}
-par_syn_SG = {'delay': 1.0,
-              'weight': 1.0}
-par_syn_GG = {'delay': 1.0,
-              'weight': 1.0}
+par_syn_GS = {'delay': 1.0, 'weight': 2.5}
+par_syn_SG = {'delay': 1.0, 'weight': 0.03}
+par_syn_GG = {'delay': 1.0, 'weight': 0.06}
 par_simulation = {
     "dt": 0.1,
     'state': "Te2002",
     't_transition': 100.,
     't_simulation': 2000.,
-    'n_stn': 10,
-    'n_gpe': 10,
+    'n_stn': 5,
+    'n_gpe': 5,
 }
 
 
 if __name__ == "__main__":
 
-    sol = TeRub2004(par_simulation['dt'])
-    sol.set_params(par_stn,
-                   par_gpe,
-                   par_syn_SG,
-                   par_syn_GS,
-                   par_syn_GG,
-                   par_simulation)
-    sol.build()
-    sol.connect()
-    sol.run()
-    sol.plot_raster()
-    sol.plot_voltages()
+    install_modules()
+
+    g_SG = np.arange(0.01, 0.2, 0.02)
+    g_GG = np.arange(0.01, 0.2, 0.02)
+
+    for i in range(len(g_SG)):
+        for j in range(len(g_GG)):
+
+            sub_name = "{:.6f}-{:.6f}".format(g_SG[i], g_GG[j])
+
+            sol = TER_RUB(par_simulation['dt'])
+            par_syn_SG['weight'] = g_SG[i]
+            par_syn_GG['weight'] = g_GG[j]
+            sol.set_params(par_stn,
+                        par_gpe,
+                        par_syn_SG,
+                        par_syn_GS,
+                        par_syn_GG,
+                        par_simulation)
+            sol.build()
+            sol.connect()
+            sol.run()
+            sol.plot_raster(filename="s-"+sub_name)
+            sol.plot_voltages(filename="v-"+sub_name)
