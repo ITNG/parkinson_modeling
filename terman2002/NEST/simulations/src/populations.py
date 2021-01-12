@@ -1,10 +1,11 @@
 import os
 import nest
+import time
 import numpy as np
-from numpy.core.records import record
 import pylab as plt
 from os.path import join
 from numpy.random import rand
+from joblib import Parallel, delayed
 np.random.seed(5)
 
 
@@ -152,7 +153,7 @@ class TER_RUB():
 
         nest.Connect(self.gpe_cells, self.gpe_cells,
                      conn_spec=conn_dict_GG,
-                     syn_spec={"receptor_type": 3,
+                     syn_spec={"receptor_type": 4,
                                'weight': self.par_syn_GG['weight'],
                                'delay': self.par_syn_GG['delay']})
         nest.Connect(self.stn_cells, self.gpe_cells,
@@ -171,18 +172,16 @@ class TER_RUB():
         nest.Connect(self.stn_cells, self.stn_spikedetector)
         nest.Connect(self.gpe_cells, self.gpe_spikedetector)
 
-
-        ## printing the connections
+        # printing the connections
         # for i in self.gpe_cells[:2]:
         #     conn = nest.GetConnections([i])
         #     print(nest.GetStatus(conn, ['source', 'target']))
         # print("---------------------------------------------")
 
-
         self.CONNECTED = True
     # ---------------------------------------------------------------
 
-    def run(self):
+    def run(self, VERBOSE=False):
 
         if not self.BUILT:
             print("network not built.")
@@ -190,6 +189,9 @@ class TER_RUB():
         if not self.CONNECTED:
             print("network not connected.")
             exit(0)
+
+        print("g_SG = {:10.3f}, g_GG = {:10.3f}".format(self.par_syn_SG['weight'],
+                                                        self.par_syn_GG['weight']))
 
         t_simulation = self.par_simulation['t_simulation']
         t_transition = self.par_simulation['t_transition']
@@ -200,16 +202,17 @@ class TER_RUB():
 
         nest.Simulate(t_simulation)
 
-        events_stn = nest.GetStatus(self.stn_spikedetector, "n_events")[0]
-        events_gpe = nest.GetStatus(self.gpe_spikedetector, "n_events")[0]
+        if VERBOSE:
+            events_stn = nest.GetStatus(self.stn_spikedetector, "n_events")[0]
+            events_gpe = nest.GetStatus(self.gpe_spikedetector, "n_events")[0]
 
-        rate_stn = events_stn / t_simulation * \
-            1000.0 / self.par_simulation['n_stn']
-        rate_gpe = events_gpe / t_simulation * \
-            1000.0 / self.par_simulation['n_gpe']
+            rate_stn = events_stn / t_simulation * \
+                1000.0 / self.par_simulation['n_stn']
+            rate_gpe = events_gpe / t_simulation * \
+                1000.0 / self.par_simulation['n_gpe']
 
-        print("stn firing rate: {}".format(rate_stn))
-        print("gpe firing rate: {}".format(rate_gpe))
+            print("stn firing rate: {}".format(rate_stn))
+            print("gpe firing rate: {}".format(rate_gpe))
     # ---------------------------------------------------------------
 
     def plot_voltages(self, filename="v"):
@@ -231,7 +234,7 @@ class TER_RUB():
         for i in range(nrows):
             ax[i][0].set_ylabel("voltage [mV]")
 
-        plt.savefig(join(self.data_path, "figs", filename+".png"), dpi=150)
+        plt.savefig(join(self.data_path, "figs", filename+".png"), dpi=100)
         plt.close()
     # ---------------------------------------------------------------
 
@@ -251,48 +254,63 @@ class TER_RUB():
 
         ax.set_ylabel("Spikes")
         ax.set_xlabel("Times [ms]")
-        plt.savefig(join(self.data_path, "figs", filename+".png"), dpi=150)
+        plt.savefig(join(self.data_path, "figs", filename+".png"), dpi=100)
         plt.close()
 
 
-par_stn = {
-    "AMPA_Tau_1": 0.2,
-    "AMPA_Tau_2": 1.0,
-    "AMPA_E_rev": 0.0,
-    "GABA_A_Tau_1": 0.5,
-    "GABA_A_Tau_2": 12.5,
-    "GABA_A_E_rev": -85.0,
-}
+def display_time(time):
 
-#  I use Gaba_B as Gaba_A, for GG connection
-par_gpe = {
-    "GABA_A_Tau_1": 0.5,
-    "GABA_A_Tau_2": 12.5,
-    "GABA_A_E_rev": -85.0,
-    "GABA_B_Tau_1": 0.5,
-    "GABA_B_Tau_2": 12.5,
-    "GABA_B_E_rev": -100.0,
-}
-
-par_syn_GS = {'delay': 1.0, 'weight': 2.5}
-par_syn_SG = {'delay': 1.0, 'weight': 0.03}
-par_syn_GG = {'delay': 1.0, 'weight': 0.06}
-par_simulation = {
-    "dt": 0.1,
-    'state': "Te2002",
-    't_transition': 100.,
-    't_simulation': 2000.,
-    'n_stn': 5,
-    'n_gpe': 5,
-}
+    hour = int(time/3600)
+    minute = (int(time % 3600)) // 60
+    second = time - (3600. * hour + 60. * minute)
+    print("Done in %d hours %d minutes %09.6f seconds"
+          % (hour, minute, second))
 
 
 if __name__ == "__main__":
 
+    par_stn = {
+        "AMPA_Tau_1": 0.2,
+        "AMPA_Tau_2": 1.0,
+        "AMPA_E_rev": 0.0,
+        "GABA_A_Tau_1": 0.5,
+        "GABA_A_Tau_2": 12.5,
+        "GABA_A_E_rev": -85.0,
+        "GABA_B_Tau_1": 0.5,
+        "GABA_B_Tau_2": 12.5,
+        "GABA_B_E_rev": -100.0,
+    }
+
+    #  I use Gaba_B as Gaba_A, for GG connection
+    par_gpe = {
+        "AMPA_Tau_1": 0.2,
+        "AMPA_Tau_2": 1.0,
+        "AMPA_E_rev": 0.0,
+        "GABA_A_Tau_1": 0.5,
+        "GABA_A_Tau_2": 12.5,
+        "GABA_A_E_rev": -85.0,
+        "GABA_B_Tau_1": 0.5,
+        "GABA_B_Tau_2": 12.5,
+        "GABA_B_E_rev": -100.0,
+    }
+
+    par_syn_GS = {'delay': 1.0, 'weight': 1.0}
+    par_syn_SG = {'delay': 1.0, 'weight': 0.03}
+    par_syn_GG = {'delay': 1.0, 'weight': 0.06}
+    par_simulation = {
+        "dt": 0.1,
+        'state': "Te2002",
+        't_transition': 100.,
+        't_simulation': 2000.,
+        'n_stn': 10,
+        'n_gpe': 10,
+    }
+
+    start_time = time.time()
     install_modules()
 
-    g_SG = np.arange(0.01, 0.2, 0.02)
-    g_GG = np.arange(0.01, 0.2, 0.02)
+    g_SG = np.linspace(0.01, 2.0, 11)
+    g_GG = np.linspace(0.01, 2.0, 11)
 
     for i in range(len(g_SG)):
         for j in range(len(g_GG)):
@@ -303,13 +321,15 @@ if __name__ == "__main__":
             par_syn_SG['weight'] = g_SG[i]
             par_syn_GG['weight'] = g_GG[j]
             sol.set_params(par_stn,
-                        par_gpe,
-                        par_syn_SG,
-                        par_syn_GS,
-                        par_syn_GG,
-                        par_simulation)
+                           par_gpe,
+                           par_syn_SG,
+                           par_syn_GS,
+                           par_syn_GG,
+                           par_simulation)
             sol.build()
             sol.connect()
             sol.run()
             sol.plot_raster(filename="s-"+sub_name)
             sol.plot_voltages(filename="v-"+sub_name)
+
+    display_time(time.time() - start_time)
