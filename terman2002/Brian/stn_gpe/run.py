@@ -70,7 +70,7 @@ par_g['v0'] = (rand(par_g['num']) * 20 - 10 - 70) * b2.mV
 
 par_sim = {
     'integration_method': "rk4",
-    'simulation_time': 4000 * b2.ms,
+    'simulation_time': 2000 * b2.ms,
     'dt': 0.1 * b2.ms,
     "state": "sparse",
     "standalone_mode" : True,
