@@ -177,6 +177,7 @@ neuron terub_stn_multisyn:
     # tau_syn_in ms = 0.08 ms # Rise time of the inhibitory synaptic alpha function.
     E_gs       mV = -85.0 mV# reversal potential for inhibitory input (from GPe)
     t_ref      ms = 2. ms    # refractory time
+    V_thr      mV = -20. mV  # spike detection threshold
 
 
     phi_r real = 0.5 # Guo 0.5 Terman02 0.2
@@ -246,7 +247,7 @@ neuron terub_stn_multisyn:
     # sending spikes: crossing 0 mV, pseudo-refractoriness and local maximum...
     if r > 0:
       r -= 1
-    elif V_m > 0 mV and U_old > V_m:
+    elif V_m > V_thr and U_old > V_m:
       r = RefractoryCounts
       emit_spike()
     end
