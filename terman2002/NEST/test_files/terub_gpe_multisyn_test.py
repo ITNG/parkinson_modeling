@@ -40,7 +40,7 @@ class NestSTNExpTest(unittest.TestCase):
         nest_path = "/home/abolfazl/prog/nest-build/"
         suffix = '_nestml'
 
-        if 1: #! compile
+        if 0: #! compile
             to_nest(input_path=input_path,
                     target_path=target_path,
                     logging_level="INFO",
@@ -71,7 +71,7 @@ class NestSTNExpTest(unittest.TestCase):
         # nest.Connect(neuron1, neuron2, syn_spec={"receptor_type": 1})  # AMPA
         # nest.Connect(neuron1, neuron2, syn_spec={"receptor_type": 2})  # NMDA
         nest.Connect(neuron1, neuron2, syn_spec={"receptor_type": 3})  # GABAA
-        # nest.Connect(neuron1, neuron2, syn_spec={"receptor_type": 4})  # GABAB
+        nest.Connect(neuron2, neuron1, syn_spec={"receptor_type": 4})  # GABAB
 
         record_from = ["V_m", "I_syn_ampa", "I_syn_nmda",
                        "I_syn_gaba_a", "I_syn_gaba_b"]
@@ -95,7 +95,7 @@ class NestSTNExpTest(unittest.TestCase):
 
         def plot_data(index=[0]):
 
-            fig, ax = plt.subplots(3, figsize=(10, 6), sharex=True)
+            fig, ax = plt.subplots(4, figsize=(10, 6), sharex=True)
             for i in index:
                 dmm = nest.GetStatus(multimeter, keys='events')[i]
                 Voltages = dmm["V_m"]
@@ -111,14 +111,22 @@ class NestSTNExpTest(unittest.TestCase):
                 ax[1].plot(tv, g, lw=2, label=labels[j])
                 j += 1
             
+            j = 0
+            dmm = nest.GetStatus(multimeter) [0]
+            tv = dmm['events']["times"]
+            for i in record_from[1:]:
+                g = dmm["events"][i]
+                ax[2].plot(tv, g, lw=2, label=labels[j])
+                j += 1
+            
             dSD = nest.GetStatus(spikedetector, keys='events')[0]
             spikes = dSD['senders']
             ts = dSD["times"]
 
-            ax[2].plot(ts, spikes, 'ko', ms=3)
-            ax[2].set_xlabel("Time [ms]")
-            ax[2].set_xlim(0, t_simulation)
-            ax[2].set_ylabel("Spikes")
+            ax[3].plot(ts, spikes, 'ko', ms=3)
+            ax[3].set_xlabel("Time [ms]")
+            ax[3].set_xlim(0, t_simulation)
+            ax[3].set_ylabel("Spikes")
             ax[0].set_title("recording from PSP")
             ax[0].set_ylabel("v [ms]")
             ax[1].set_ylabel("I_syn")
@@ -127,7 +135,7 @@ class NestSTNExpTest(unittest.TestCase):
 
 
             plt.savefig(join("resources", "terub_gpe_multisyn.png"), dpi=150)
-            plt.show()
+            # plt.show()
 
         plot_data(index=[0, 1])
 

@@ -127,7 +127,7 @@ class NestSTNExpTest(unittest.TestCase):
 
 
             plt.savefig(join("resources", "terub_stn_multisyn.png"), dpi=150)
-            plt.show()
+            # plt.show()
 
         plot_data(index=[0, 1])
 

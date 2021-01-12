@@ -34,7 +34,7 @@ class NestSTNExpTest(unittest.TestCase):
             os.path.dirname(__file__), "../models", "terub_stn.nestml")))
         target_path = "target"
         module_name = 'terub_stn_module'
-        nest_path="/home/abolfazl/prog/nest-build/"
+        nest_path = "/home/abolfazl/prog/nest-build/"
         suffix = '_nestml'
 
         if 1:
@@ -65,11 +65,8 @@ class NestSTNExpTest(unittest.TestCase):
         for neuron in neurons:
             nest.SetStatus([neuron], {'V_m': -65.0 + rand() * 10.0 - 5.0})
             nest.SetStatus([neuron], {'I_e': 0.0 + rand() * 10.0 - 5.0})
-        
+
         nest.Connect([neurons[0]], [neurons[1]])
-
-
-
 
         multimeter = nest.Create("multimeter", 2)
         nest.SetStatus(multimeter, {"withtime": True,
