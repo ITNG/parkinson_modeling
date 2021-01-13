@@ -6,7 +6,7 @@ from time import time
 import networkx as nx
 from numpy.random import rand
 from lib import simulate_STN_GPe_population
-from plotting import plot_raster, plot_voltage
+from plotting import plot_raster, plot_voltage, plot_voltage2
 
 np.random.seed(2)
 
@@ -29,7 +29,7 @@ par_s = {
     'phi': 0.75, 'phir': 0.2,  # Guo 0.5 Terman02 0.2
     'kca': 22.5,  'thn': -80, 'thh': -57, 'thr': 68, 'ab': -30, 'k1': 15,
     'thetag_s': 30., 'thetagH_s': -39., 'sigmagH_s': 8.,
-    'i_ext': -1.2 * b2.pA, 'C': 1 * b2.pF,
+    'i_ext': 0 * b2.pA, 'C': 1 * b2.pF,
 }
 
 par_g = {
@@ -50,7 +50,7 @@ par_g = {
     'phig': 1., 'phing': .05,  # Report: 0.1, Terman Rubin 2002: 0.05
     'phihg': .05, 'epsg': 0.0001 / b2.ms,
     'thetag_g': 20.,  'thetagH_g': -57., 'sigmagH_g': 2.,
-    'i_ext': -1.2 * b2.pA,  'C': 1 * b2.pF,
+    'i_ext': -0.5 * b2.pA,  'C': 1 * b2.pF,
 }
 
 par_syn = {
@@ -61,10 +61,10 @@ par_syn = {
     'betas': 1. / b2.ms,
     'alphag': 2. / b2.ms,
     'betag': 0.08 / b2.ms,
-    'g_GtoS':2.5*b2.nS,
-    'g_StoG':0.03*b2.nS,
-    'g_GtoG':0.06*b2.nS,
-    'p_GtoG':1,
+    'g_GtoS': 2.5*b2.nS,
+    'g_StoG': 0.03*b2.nS,
+    'g_GtoG': 0.06*b2.nS,
+    'p_GtoG': 1,
 }
 
 par_s['num'] = 1
@@ -75,10 +75,10 @@ par_g['v0'] = (rand(par_g['num']) * 20 - 10 - 70) * b2.mV
 
 par_sim = {
     'integration_method': "rk4",
-    'simulation_time': 20 * b2.ms,
-    'dt': 0.1 * b2.ms,
+    'simulation_time': 1000 * b2.ms,
+    'dt': 0.05 * b2.ms,  #! dt <= 0.05 ms 
     "state": "sparse",
-    "standalone_mode": False,
+    "standalone_mode": 1,
 }
 
 if __name__ == "__main__":
@@ -91,24 +91,29 @@ if __name__ == "__main__":
 
     # for state in states:
 
-    g_StoG = np.arange(0.01, 0.1, 0.02)
-    g_GtoG = np.arange(0.0,  0.1, 0.02)
+    params = {"par_sim": par_sim,
+              "par_syn": par_syn,
+              "par_s": par_s,
+              "par_g": par_g}
+
+    g_StoG = [0.03] # np.arange(0.01, 0.1, 0.02)
+    # g_GtoG = np.arange(0.0,  0.1, 0.02)
+    g_GtoG = [0.05]
 
     for i in range(len(g_StoG)):
         for j in range(len(g_GtoG)):
             start_time = time()
-            print("g_StoG = {:10.6f}, g_GtoG = {:10.6f}".format(g_StoG[i], g_GtoG[j]))
+            print("g_StoG = {:10.6f}, g_GtoG = {:10.6f}".format(
+                g_StoG[i], g_GtoG[j]))
             sub_name = "{:.6f}-{:.6f}".format(g_StoG[i], g_GtoG[j])
 
             par_syn['g_StoG'] = g_StoG[i] * b2.nS
             par_syn['g_GtoG'] = g_GtoG[j] * b2.nS
 
-            monitors = simulate_STN_GPe_population(par_s,
-                                                   par_g,
-                                                   par_syn,
-                                                   par_sim)
+            monitors = simulate_STN_GPe_population(params)
 
-            print("{:s} Done in {:10.3f}".format(sub_name, time() - start_time))
-            plot_voltage(monitors, indices=[0],
-                         filename="v-{}".format(sub_name))
-            plot_raster(monitors, filename="sp-{}".format(sub_name))
+            print("{:s} Done in {:10.3f}".format(
+                sub_name, time() - start_time))
+            plot_voltage2(monitors, indices=[0],
+                          filename="v-{}".format(sub_name))
+            # plot_raster(monitors, filename="sp-{}".format(sub_name))

@@ -3,24 +3,28 @@ import pylab as plt
 import brian2 as b2
 from os.path import join
 
+# b2.prefs.codegen.target = 'numpy'
+# b2.prefs.devices.cpp_standalone.openmp_threads = 1
 
-# if 1:
-#     b2.set_device('cpp_standalone',
-#                   build_on_run=False,
-#                   directory="output")
+if 1:
+    b2.set_device('cpp_standalone',
+                  build_on_run=False,
+                  directory="output")
 
 
-def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
+def simulate_STN_GPe_population(params):
 
     b2.start_scope()
+
+    par_s = params['par_s']
+    par_g = params['par_g']
+    par_syn = params['par_syn']
+    par_sim = params['par_sim']
 
     if par_sim['standalone_mode']:
         b2.get_device().reinit()
         b2.get_device().activate(build_on_run=False,
                                  directory="output")
-
-    b2.prefs.codegen.target = 'numpy'
-    # b2.prefs.devices.cpp_standalone.openmp_threads = 1
 
     b2.defaultclock.dt = par_sim['dt']
 
@@ -50,7 +54,7 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
 
     tmp2 = vs - thetag_s *mV : volt
     Hinf_s = 1 / (1 + exp(-(tmp2 - thetas*mV) / (sigmas*mV))) : 1
-    ds_sg/dt = alphas * Hinf_s * (1 - s_sg) - betas * s_sg : 1
+    ds_StoG/dt = alphas * Hinf_s * (1 - s_StoG) - betas * s_StoG : 1
 
     dh/dt  = phi * (hinf - h) / tauh  : 1
     dn/dt  = phi * (ninf - n) / taun  : 1
@@ -90,20 +94,20 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     ilg = glg * (vg - vlg) : amp
 
     s_GtoS_sum : 1
-    s_sg_sum : 1
+    s_StoG_sum : 1
 
-    i_syn_StoG = g_StoG * s_sg_sum * (v_rev_StoG - vg) : amp
-    i_syn_gg = g_GtoG * s_GtoS_sum * (v_rev_GtoG - vg) : amp
+    i_syn_StoG = g_StoG * s_StoG_sum * (v_rev_StoG - vg) : amp
+    i_syn_GtoG = g_GtoG * s_GtoS_sum * (v_rev_GtoG - vg) : amp
 
-    membrane_Im =-(itg+inag+ikg+iahpg+icag+ilg)+i_extg+i_syn_StoG+i_syn_gg : amp
+    membrane_Im =-(itg+inag+ikg+iahpg+icag+ilg)+i_extg+i_syn_StoG+i_syn_GtoG : amp
     '''
 
-    eqs_syn_GtoS = '''
-    s_GtoS_sum_post = g_GtoS * s_GtoS_pre : 1 (summed)
-    '''
-    eqs_syn_StoG = '''
-    s_sg_sum_post = g_StoG * s_sg_pre : 1 (summed)
-    '''
+    # eqs_syn_GtoS = '''
+    # s_GtoS_sum_post = g_GtoS * s_GtoS_pre : 1 (summed)
+    # '''
+    # eqs_syn_StoG = '''
+    # s_StoG_sum_post = g_StoG * s_StoG_pre : 1 (summed)
+    # '''
 
     #---------------------------------------------------------------#
     neurons_s = b2.NeuronGroup(par_s['num'],
@@ -124,36 +128,39 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
                                namespace={**par_g, **par_syn},
                                )
 
-    syn_GtoS = b2.Synapses(neurons_g, neurons_s, eqs_syn_GtoS,
-                         method=par_sim['integration_method'],
-                         dt=par_sim['dt'],
-                         namespace=par_syn)
+    # syn_GtoS = b2.Synapses(neurons_g, neurons_s, eqs_syn_GtoS,
+    #                        method=par_sim['integration_method'],
+    #                        dt=par_sim['dt'],
+    #                        namespace=par_syn)
 
     # cols, rows = np.nonzero(par_syn['adj_GtoS'])
     # syn_GtoS.connect(i=rows, j=cols)
     # syn_GtoS.connect(j='i')
-    syn_GtoS.connect(i=0, j=0)
 
-    syn_StoG = b2.Synapses(neurons_s, neurons_g, eqs_syn_StoG,
-                         method=par_sim['integration_method'],
-                         dt=par_sim['dt'],
-                         namespace=par_syn)
+    # syn_GtoS.connect(i=0, j=0)
+
+    # syn_StoG = b2.Synapses(neurons_s, neurons_g, eqs_syn_StoG,
+    #                        method=par_sim['integration_method'],
+    #                        dt=par_sim['dt'],
+    #                        namespace=par_syn)
     # syn_StoG.connect(j='i')
-    syn_StoG.connect(i=0, j=0)
 
-    syn_gg = b2.Synapses(neurons_g, neurons_g,
-                         method=par_sim['integration_method'],
-                         dt=par_sim['dt'],
-                         namespace=par_syn)
-    # syn_gg.connect(p=par_syn['p_GtoG'], condition='i != j')
-    syn_gg.connect(i=0, j=0)
+    # syn_StoG.connect(i=0, j=0)
 
-    neurons_s.vs = par_s['v0']
-    neurons_s.h = "hinf"
-    neurons_s.n = "ninf"
-    neurons_s.r = "rinf"
-    neurons_s.ca = 0
-    neurons_s.i_exts = par_s['i_ext']
+    # syn_GtoG = b2.Synapses(neurons_g, neurons_g,
+    #                      method=par_sim['integration_method'],
+    #                      dt=par_sim['dt'],
+    #                      namespace=par_syn)
+    # syn_GtoG.connect(p=par_syn['p_GtoG'], condition='i != j')
+
+    # syn_GtoG.connect(i=0, j=0)
+
+    # neurons_s.vs = par_s['v0']
+    # neurons_s.h = "hinf"
+    # neurons_s.n = "ninf"
+    # neurons_s.r = "rinf"
+    # neurons_s.ca = 0
+    # neurons_s.i_exts = par_s['i_ext']
 
     neurons_g.vg = par_g['v0']
     neurons_g.hg = "hinfg"
@@ -169,15 +176,13 @@ def simulate_STN_GPe_population(par_s, par_g, par_syn, par_sim):
     sp_mon_s = b2.SpikeMonitor(neurons_s)
     sp_mon_g = b2.SpikeMonitor(neurons_g)
 
-    net = b2.Network(neurons_s)
-    net.add(neurons_g)
-    net.add(syn_GtoS)
-    net.add(syn_StoG)
-    net.add(syn_gg)
-    net.add(st_mon_s)
-    net.add(st_mon_g)
-    net.add(sp_mon_s)
-    net.add(sp_mon_g)
+    net = b2.Network(neurons_s, neurons_g,
+                     st_mon_g, sp_mon_g,
+                     st_mon_s, st_mon_g)
+    
+    # net.add(syn_GtoS)
+    # net.add(syn_StoG)
+    # net.add(syn_GtoG)
 
     net.run(par_sim['simulation_time'])
 
@@ -233,11 +238,11 @@ def visualise_connectivity(S, file_name):
 # dsg/dt = alphag * Hinfs * (1 - sg) - betag * sg : 1 (clock-driven)
 # i_syn_GtoS_post = w * g_StoG * sg * (v_rev_gs - vs) : amp (summed)
 # '''
-# syn_gg_eqs = '''
+# syn_GtoG_eqs = '''
 # w : 1
 # Hinfgg = 1/(1+exp(-(vg-thetag_g*mV - thetagH_g*mV)/(sigmagH_g*mV))) : 1
 # dsg/dt = alphag * Hinfgg * (1 - sg) - betag * sg : 1 (clock-driven)
-# i_syn_gg_post = w * g_GtoG * sg * (v_rev_gg - vg) : amp (summed)
+# i_syn_GtoG_post = w * g_GtoG * sg * (v_rev_gg - vg) : amp (summed)
 # '''
 # visualise_connectivity(S_gg, join("figs", "S_gg.png"))
 # visualise_connectivity(S_gs, join("figs", "S_gs.png"))
