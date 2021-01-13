@@ -52,9 +52,9 @@ def simulate_STN_GPe_population(params):
 
     s_GtoS_sum : 1
 
-    tmp2 = vs - thetag_s *mV : volt
-    Hinf_s = 1 / (1 + exp(-(tmp2 - thetas*mV) / (sigmas*mV))) : 1
-    ds_StoG/dt = alphas * Hinf_s * (1 - s_StoG) - betas * s_StoG : 1
+    # tmp2 = vs - thetag_s *mV : volt
+    # Hinf_s = 1 / (1 + exp(-(tmp2 - thetas*mV) / (sigmas*mV))) : 1
+    # ds_StoG/dt = alphas * Hinf_s * (1 - s_StoG) - betas * s_StoG : 1
 
     dh/dt  = phi * (hinf - h) / tauh  : 1
     dn/dt  = phi * (ninf - n) / taun  : 1
@@ -93,18 +93,19 @@ def simulate_STN_GPe_population(params):
     icag = gcag * (sinfg ** 2) * (vg - vcag) : amp
     ilg = glg * (vg - vlg) : amp
 
-    s_GtoS_sum : 1
-    s_StoG_sum : 1
+    # s_GtoS_sum : 1
+    # s_StoG_sum : 1
 
-    i_syn_StoG = g_StoG * s_StoG_sum * (v_rev_StoG - vg) : amp
-    i_syn_GtoG = g_GtoG * s_GtoS_sum * (v_rev_GtoG - vg) : amp
+    # i_syn_StoG = g_StoG * s_StoG_sum * (v_rev_StoG - vg) : amp
+    # i_syn_GtoG = g_GtoG * s_GtoS_sum * (v_rev_GtoG - vg) : amp
 
-    membrane_Im =-(itg+inag+ikg+iahpg+icag+ilg)+i_extg+i_syn_StoG+i_syn_GtoG : amp
+    membrane_Im =-(itg+inag+ikg+iahpg+icag+ilg)+i_extg : amp # +i_syn_StoG+i_syn_GtoG
     '''
 
-    # eqs_syn_GtoS = '''
-    # s_GtoS_sum_post = g_GtoS * s_GtoS_pre : 1 (summed)
-    # '''
+    eqs_syn_GtoS = '''
+    w : 1
+    s_GtoS_sum_post = w * g_GtoS * s_GtoS_pre : 1 (summed)
+    '''
     # eqs_syn_StoG = '''
     # s_StoG_sum_post = g_StoG * s_StoG_pre : 1 (summed)
     # '''
@@ -128,24 +129,23 @@ def simulate_STN_GPe_population(params):
                                namespace={**par_g, **par_syn},
                                )
 
-    # syn_GtoS = b2.Synapses(neurons_g, neurons_s, eqs_syn_GtoS,
-    #                        method=par_sim['integration_method'],
-    #                        dt=par_sim['dt'],
-    #                        namespace=par_syn)
+    syn_GtoS = b2.Synapses(neurons_g, neurons_s, eqs_syn_GtoS,
+                           method=par_sim['integration_method'],
+                           dt=par_sim['dt'],
+                           namespace=par_syn)
 
     # cols, rows = np.nonzero(par_syn['adj_GtoS'])
     # syn_GtoS.connect(i=rows, j=cols)
-    # syn_GtoS.connect(j='i')
-
-    # syn_GtoS.connect(i=0, j=0)
+    syn_GtoS.connect(i=0, j=0)
+    syn_GtoS.w = 100
 
     # syn_StoG = b2.Synapses(neurons_s, neurons_g, eqs_syn_StoG,
     #                        method=par_sim['integration_method'],
     #                        dt=par_sim['dt'],
     #                        namespace=par_syn)
     # syn_StoG.connect(j='i')
-
     # syn_StoG.connect(i=0, j=0)
+    # syn_StoG.connect(p=1)
 
     # syn_GtoG = b2.Synapses(neurons_g, neurons_g,
     #                      method=par_sim['integration_method'],
@@ -155,12 +155,12 @@ def simulate_STN_GPe_population(params):
 
     # syn_GtoG.connect(i=0, j=0)
 
-    # neurons_s.vs = par_s['v0']
-    # neurons_s.h = "hinf"
-    # neurons_s.n = "ninf"
-    # neurons_s.r = "rinf"
-    # neurons_s.ca = 0
-    # neurons_s.i_exts = par_s['i_ext']
+    neurons_s.vs = par_s['v0']
+    neurons_s.h = "hinf"
+    neurons_s.n = "ninf"
+    neurons_s.r = "rinf"
+    neurons_s.ca = 0
+    neurons_s.i_exts = par_s['i_ext']
 
     neurons_g.vg = par_g['v0']
     neurons_g.hg = "hinfg"
@@ -171,7 +171,7 @@ def simulate_STN_GPe_population(params):
 
     #---------------------------------------------------------------#
 
-    st_mon_s = b2.StateMonitor(neurons_s, "vs", record=True)
+    st_mon_s = b2.StateMonitor(neurons_s, ["vs", "i_syn_GtoS"], record=True)
     st_mon_g = b2.StateMonitor(neurons_g, "vg", record=True)
     sp_mon_s = b2.SpikeMonitor(neurons_s)
     sp_mon_g = b2.SpikeMonitor(neurons_g)
@@ -180,7 +180,7 @@ def simulate_STN_GPe_population(params):
                      st_mon_g, sp_mon_g,
                      st_mon_s, st_mon_g)
     
-    # net.add(syn_GtoS)
+    net.add(syn_GtoS)
     # net.add(syn_StoG)
     # net.add(syn_GtoG)
 
