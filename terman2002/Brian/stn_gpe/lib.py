@@ -134,23 +134,23 @@ def simulate_STN_GPe_population(params):
                            dt=par_sim['dt'],
                            namespace=par_syn)
 
-    # cols, rows = np.nonzero(par_syn['adj_GtoS'])
-    # syn_GtoS.connect(i=rows, j=cols)
-    syn_GtoS.connect(i=0, j=0)
+    cols, rows = np.nonzero(par_syn['adj_GtoS'])
+    syn_GtoS.connect(i=rows, j=cols)
+    # syn_GtoS.connect(i=0, j=0)
 
     syn_StoG = b2.Synapses(neurons_s, neurons_g, eqs_syn_StoG,
                            method=par_sim['integration_method'],
                            dt=par_sim['dt'],
                            namespace=par_syn)
-    # syn_StoG.connect(j='i')
-    syn_StoG.connect(i=0, j=0)
+    syn_StoG.connect(j='i')
+    # syn_StoG.connect(i=0, j=0)
 
     syn_GtoG = b2.Synapses(neurons_g, neurons_g, eqs_syn_GtoG,
                          method=par_sim['integration_method'],
                          dt=par_sim['dt'],
                          namespace=par_syn)
-    # syn_GtoG.connect(p=par_syn['p_GtoG'], condition='i != j')
-    syn_GtoG.connect(i=0, j=0)
+    syn_GtoG.connect(p=par_syn['p_GtoG'], condition='i != j')
+    # syn_GtoG.connect(i=0, j=0)
 
     neurons_s.vs = par_s['v0']
     neurons_s.h = "hinf"

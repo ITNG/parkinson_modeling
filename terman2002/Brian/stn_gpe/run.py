@@ -29,7 +29,7 @@ par_s = {
     'phi': 0.75, 'phir': 0.2,  # Guo 0.5 Terman02 0.2
     'kca': 22.5,  'thn': -80, 'thh': -57, 'thr': 68, 'ab': -30, 'k1': 15,
     'thetag_s': 30., 'thetagH_s': -39., 'sigmagH_s': 8.,
-    'i_ext': -.4 * b2.pA, 'C': 1 * b2.pF,
+    'i_ext': -1.2 * b2.pA, 'C': 1 * b2.pF,
 }
 
 par_g = {
@@ -48,9 +48,9 @@ par_g = {
     'thngt': -40, 'thhgt': -40, 'sng': -12, 'shg': -12,
     'k1g': 30., 'kcag': 20.,  # Report:15,  Terman Rubin 2002: 20.0
     'phig': 1., 'phing': .05,  # Report: 0.1, Terman Rubin 2002: 0.05
-    'phihg': .05, 'epsg': 0.0001 / b2.ms,
+    'phihg': .05, 'epsg': 0.0001 /b2.ms,
     'thetag_g': 20.,  'thetagH_g': -57., 'sigmagH_g': 2.,
-    'i_ext': -.4 * b2.pA,  'C': 1 * b2.pF,
+    'i_ext': -1.2 *b2.pA,  'C': 1 *b2.pF,
 }
 
 par_syn = {
@@ -67,8 +67,8 @@ par_syn = {
     'p_GtoG': 1,
 }
 
-par_s['num'] = 1
-par_g['num'] = 1
+par_s['num'] = 10
+par_g['num'] = 10
 par_s['v0'] = (rand(par_s['num']) * 20 - 10 - 70) * b2.mV
 par_g['v0'] = (rand(par_g['num']) * 20 - 10 - 70) * b2.mV
 
@@ -83,11 +83,11 @@ par_sim = {
 
 if __name__ == "__main__":
 
-    # K = 2
-    # Graph_GtoS = nx.watts_strogatz_graph(par_s['num'], K, 0, seed=1)
-    # A = nx.to_numpy_array(Graph_GtoS, dtype=int)
+    K = 2
+    Graph_GtoS = nx.watts_strogatz_graph(par_s['num'], K, 0, seed=1)
+    A = nx.to_numpy_array(Graph_GtoS, dtype=int)
     # A = np.asarray([[0, 1],[1, 0]])
-    # par_syn['adj_GtoS'] = A
+    par_syn['adj_GtoS'] = A
 
     # for state in states:
 
@@ -96,9 +96,9 @@ if __name__ == "__main__":
               "par_s": par_s,
               "par_g": par_g}
 
-    g_StoG = [1] # np.arange(1, 10, 3)
-    g_GtoG = [1] # np.arange(1, 10, 3)
-    par_syn['g_GtoS'] = 5. * b2.nS
+    g_StoG = np.linspace(0.01, 0.1, 4)
+    g_GtoG = np.linspace(0, 0.1, 4)
+    # par_syn['g_GtoS'] = 5. * b2.nS
     
 
     for i in range(len(g_StoG)):
@@ -115,6 +115,6 @@ if __name__ == "__main__":
 
             print("{:s} Done in {:10.3f}".format(
                 sub_name, time() - start_time))
-            plot_voltage2(monitors, indices=[0],
+            plot_voltage(monitors, indices=[0, 1, 2],
                           filename="v-{}".format(sub_name))
             # plot_raster(monitors, filename="sp-{}".format(sub_name))
