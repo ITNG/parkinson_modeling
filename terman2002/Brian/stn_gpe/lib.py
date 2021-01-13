@@ -4,12 +4,12 @@ import brian2 as b2
 from os.path import join
 
 # b2.prefs.codegen.target = 'numpy'
-# b2.prefs.devices.cpp_standalone.openmp_threads = 1
 
 if 1:
     b2.set_device('cpp_standalone',
                   build_on_run=False,
                   directory="output")
+    b2.prefs.devices.cpp_standalone.openmp_threads = 1
 
 
 def simulate_STN_GPe_population(params):
@@ -52,7 +52,8 @@ def simulate_STN_GPe_population(params):
     s_GtoS_sum : 1
 
     tmp2 = vs - thetag_s *mV : volt
-    Hinf_s = 1 / (1 + exp(-(tmp2 - thetas*mV) / (sigmas*mV))) : 1
+    # Hinf_s = 1 / (1 + exp(-(tmp2 - thetas*mV) / (sigmas*mV))) : 1
+    Hinf_s = 1 / (1 + exp(-(tmp2 - thetagH_s*mV) / (sigmagH_s*mV))) : 1
     ds_StoG/dt = alphas * Hinf_s * (1 - s_StoG) - betas * s_StoG : 1
 
     dh/dt  = phi * (hinf - h) / tauh  : 1
@@ -82,7 +83,8 @@ def simulate_STN_GPe_population(params):
     dvg/dt = membrane_Im / C : volt
 
     tmp1 = vg - thetag_g *mV : volt
-    Hinf_g = 1 / (1 + exp(-(tmp1 - thetasg*mV) / (sigsg*mV))) : 1
+    # Hinf_g = 1 / (1 + exp(-(tmp1 - thetasg*mV) / (sigsg*mV))) : 1
+    Hinf_g = 1 / (1 + exp(-(tmp1 - thetagH_g*mV) / (sigmagH_g*mV))) : 1
     ds_GtoS/dt = alphag * (1 - s_GtoS) * Hinf_g - betag * s_GtoS : 1
 
     itg = gtg * (ainfg ** 3) * rg * (vg - vcag) : amp

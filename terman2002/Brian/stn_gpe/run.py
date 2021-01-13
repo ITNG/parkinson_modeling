@@ -96,8 +96,8 @@ if __name__ == "__main__":
               "par_s": par_s,
               "par_g": par_g}
 
-    g_StoG = np.linspace(0.01, 0.1, 4)
-    g_GtoG = np.linspace(0, 0.1, 4)
+    g_StoG = [0.03, 0.016, 0.1] # np.linspace(0.01, 0.1, 4)
+    g_GtoG = [0.06, 0.0, 0.02] # np.linspace(0, 0.1, 4)
     # par_syn['g_GtoS'] = 5. * b2.nS
     
 
