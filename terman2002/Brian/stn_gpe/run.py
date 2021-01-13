@@ -29,7 +29,7 @@ par_s = {
     'phi': 0.75, 'phir': 0.2,  # Guo 0.5 Terman02 0.2
     'kca': 22.5,  'thn': -80, 'thh': -57, 'thr': 68, 'ab': -30, 'k1': 15,
     'thetag_s': 30., 'thetagH_s': -39., 'sigmagH_s': 8.,
-    'i_ext': -0.4 * b2.pA, 'C': 1 * b2.pF,
+    'i_ext': -.4 * b2.pA, 'C': 1 * b2.pF,
 }
 
 par_g = {
@@ -50,7 +50,7 @@ par_g = {
     'phig': 1., 'phing': .05,  # Report: 0.1, Terman Rubin 2002: 0.05
     'phihg': .05, 'epsg': 0.0001 / b2.ms,
     'thetag_g': 20.,  'thetagH_g': -57., 'sigmagH_g': 2.,
-    'i_ext': -0.4 * b2.pA,  'C': 1 * b2.pF,
+    'i_ext': -.4 * b2.pA,  'C': 1 * b2.pF,
 }
 
 par_syn = {
@@ -96,9 +96,9 @@ if __name__ == "__main__":
               "par_s": par_s,
               "par_g": par_g}
 
-    g_StoG = [5] # np.arange(1, 10, 3)
-    g_GtoG = [5] # np.arange(1, 10, 3)
-    par_syn['g_GtoS'] = 20. * b2.nS
+    g_StoG = [1] # np.arange(1, 10, 3)
+    g_GtoG = [1] # np.arange(1, 10, 3)
+    par_syn['g_GtoS'] = 5. * b2.nS
     
 
     for i in range(len(g_StoG)):
