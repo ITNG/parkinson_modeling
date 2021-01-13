@@ -1,7 +1,7 @@
 .phoney : clean eradicate
 
 clean: 
-	rm -rf data/*
+	rm -rf data/figs/*
 
 eradicate: clean
 	rm -rf output

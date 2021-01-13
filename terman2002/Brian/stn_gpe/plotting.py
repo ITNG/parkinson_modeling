@@ -5,8 +5,8 @@ import brian2 as b2
 import pylab as plt
 from os.path import join
 
-if not os.path.exists("figs"):
-    os.makedirs("figs")
+if not os.path.exists("data/figs"):
+    os.makedirs("data/figs")
 
 
 def plot_voltage(monitors, indices, filename):
@@ -34,7 +34,7 @@ def plot_voltage(monitors, indices, filename):
     ax[-1, 1].set_xlabel("time [ms]", fontsize=14)
     
     plt.tight_layout()
-    plt.savefig(join("data", '{}.png'.format(filename)))
+    plt.savefig(join("data/figs", '{}.png'.format(filename)))
     # plt.show()
 
 
@@ -52,5 +52,5 @@ def plot_raster(monitors, filename="spikes", markersize=2):
     ax[0].set_ylabel("STN neuron id")
     ax[1].set_ylabel("GPe neuron id")
     plt.tight_layout()
-    plt.savefig(join("data", '{}.png'.format(filename)))
+    plt.savefig(join("data/figs", '{}.png'.format(filename)))
     # plt.show()
