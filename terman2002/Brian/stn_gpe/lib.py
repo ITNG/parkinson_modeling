@@ -48,7 +48,8 @@ def simulate_STN_GPe_population(params):
     ica = gca * sinf ** 2 * (vs - vca) : amp 
     it = gt * ainf ** 3 * binf ** 2 * (vs - vca) : amp 
     i_exts : amp 
-    i_syn_GtoS = g_GtoS * s_GtoS_sum * (v_rev_GtoS - vs): amp
+    # i_syn_GtoS = g_GtoS * s_GtoS_sum * (v_rev_GtoS - vs): amp
+    i_syn_GtoS : amp
 
     s_GtoS_sum : 1
 
@@ -103,8 +104,8 @@ def simulate_STN_GPe_population(params):
     '''
 
     eqs_syn_GtoS = '''
-    w : 1
-    s_GtoS_sum_post = w * g_GtoS * s_GtoS_pre : 1 (summed)
+    # s_GtoS_sum_post = g_GtoS * s_GtoS_pre : 1 (summed)
+    i_syn_GtoS_post = g_GtoS*s_GtoS_pre*(v_rev_GtoS-vs):amp (summed)
     '''
     # eqs_syn_StoG = '''
     # s_StoG_sum_post = g_StoG * s_StoG_pre : 1 (summed)
@@ -137,7 +138,6 @@ def simulate_STN_GPe_population(params):
     # cols, rows = np.nonzero(par_syn['adj_GtoS'])
     # syn_GtoS.connect(i=rows, j=cols)
     syn_GtoS.connect(i=0, j=0)
-    syn_GtoS.w = 100
 
     # syn_StoG = b2.Synapses(neurons_s, neurons_g, eqs_syn_StoG,
     #                        method=par_sim['integration_method'],
