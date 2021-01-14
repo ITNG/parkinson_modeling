@@ -7,7 +7,7 @@ from copy import deepcopy
 from numpy.random import rand
 from time import time as wall_time
 from joblib import Parallel, delayed
-from lib import simulate_STN_GPe_population, to_npz
+from lib import MakeRingGraph_jump, simulate_STN_GPe_population, to_npz
 from plotting import plot_raster, plot_voltage, plot_voltage2
 
 np.random.seed(2)
@@ -40,7 +40,7 @@ par_s = {
     'phi': 0.75, 'phir': 0.2,  # Guo 0.5 Terman02 0.2
     'kca': 22.5,  'thn': -80, 'thh': -57, 'thr': 68, 'ab': -30, 'k1': 15,
     'thetag_s': 30., 'thetagH_s': -39., 'sigmagH_s': 8.,
-    'i_ext': -1.2 * b2.pA, 'C': 1 * b2.pF,
+    'i_ext': -1.0 * b2.pA, 'C': 1 * b2.pF,
 }
 
 par_g = {
@@ -61,17 +61,17 @@ par_g = {
     'phig': 1., 'phing': .05,  # Report: 0.1, Terman Rubin 2002: 0.05
     'phihg': .05, 'epsg': 0.0001 / b2.ms,
     'thetag_g': 20.,  'thetagH_g': -57., 'sigmagH_g': 2.,
-    'i_ext': -1.2 * b2.pA,  'C': 1 * b2.pF,
+    'i_ext': -1.0 * b2.pA,  'C': 1 * b2.pF,
 }
 
 par_syn = {
-    'v_rev_GtoG': -100. * b2.mV,
+    'v_rev_GtoG': -85. * b2.mV,  # -100. * b2.mV, for figure3, T2002
     'v_rev_StoG': 0. * b2.mV,
     'v_rev_GtoS': -85. * b2.mV,
     'alphas': 5. / b2.ms,
     'betas': 1. / b2.ms,
     'alphag': 2. / b2.ms,
-    'betag': 0.08 / b2.ms,
+    'betag': 0.04 / b2.ms, # 0.08 / b2.ms, for figure3, T2002
     'g_GtoS': 2.5*b2.nS,
     'g_StoG': 0.03*b2.nS,
     'g_GtoG': 0.06*b2.nS,
@@ -106,11 +106,16 @@ if __name__ == "__main__":
         'dt': 0.05 * b2.ms,  # ! dt <= 0.05 ms
         "standalone_mode": 1}
 
-    n_neighbors = 2
-    Graph_GtoS = nx.watts_strogatz_graph(par_s['num'], n_neighbors, 0, seed=1)
+    Graph_GtoS = MakeRingGraph_jump(par_g['num'], 4, 0, seed=1)
     A = nx.to_numpy_array(Graph_GtoS, dtype=int)
-
     par_syn['adj_GtoS'] = A
+
+    n_neighbors = 2
+    Graph_GtoG = nx.watts_strogatz_graph(par_g['num'], n_neighbors, 0, seed=1)
+    A = nx.to_numpy_array(Graph_GtoG, dtype=int)
+    par_syn['adj_GtoG'] = A
+
+
     params = {"par_sim": par_sim,
               "par_syn": par_syn,
               "par_s": par_s,

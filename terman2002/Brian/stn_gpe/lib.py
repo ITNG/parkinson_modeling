@@ -129,6 +129,7 @@ def simulate_STN_GPe_population(params):
                                refractory='vs>-20*mV',
                                namespace={**par_s, **par_syn},
                                )
+    
     #---------------------------------------------------------------#
     neurons_g = b2.NeuronGroup(par_g['num'],
                                eqs_g,
@@ -138,29 +139,36 @@ def simulate_STN_GPe_population(params):
                                refractory='vg>-20*mV',
                                namespace={**par_g, **par_syn},
                                )
-
+    # ---------------------------------------------------------------
     syn_GtoS = b2.Synapses(neurons_g, neurons_s, eqs_syn_GtoS,
                            method=par_sim['integration_method'],
                            dt=par_sim['dt'],
                            namespace=par_syn)
-
+    # ---------------------------------------------------------------
     cols, rows = np.nonzero(par_syn['adj_GtoS'])
     syn_GtoS.connect(i=rows, j=cols)
-    syn_GtoS.connect(j='i')
+    
+    # syn_GtoS.connect(j='i')
     # syn_GtoS.connect(j='k for k in range(i-1, i+2)', skip_if_invalid=True)
-
+    
+    # ---------------------------------------------------------------
     syn_StoG = b2.Synapses(neurons_s, neurons_g, eqs_syn_StoG,
                            method=par_sim['integration_method'],
                            dt=par_sim['dt'],
                            namespace=par_syn)
     syn_StoG.connect(j='i')
-
+    
+    # ---------------------------------------------------------------
     syn_GtoG = b2.Synapses(neurons_g, neurons_g, eqs_syn_GtoG,
                            method=par_sim['integration_method'],
                            dt=par_sim['dt'],
                            namespace=par_syn)
-    syn_GtoG.connect(p=par_syn['p_GtoG'], condition='i != j')
-    # syn_GtoG.connect(i=0, j=0)
+    # figure 5, T2002
+    cols, rows = np.nonzero(par_syn['adj_GtoG'])
+    syn_GtoG.connect(i=rows, j=cols)
+    # syn_GtoG.connect(p=par_syn['p_GtoG'], condition='i != j')
+    # ---------------------------------------------------------------
+    
 
     neurons_s.vs = par_s['v0']
     neurons_s.h = "hinf"
@@ -289,6 +297,21 @@ def to_npz(monitors, subname, indices=[0], save_voltages=False,
                  )
         counter += 1
 
+
+def MakeRingGraph_jump(num_nodes, Z):
+    """
+    Makes a ring graph with Z neighboring edges per node.
+    """
+    A = np.zeros((num_nodes, num_nodes), dtype=int)
+    if (Z %2) != 0:
+        raise ValueError("must specify even number of edges per node")
+    for i in range(num_nodes):
+#         for di in range(1, int(Z / 2) + 1):
+        for di in [int(Z/2)]:    
+            j = (i + di) % num_nodes
+            A[i, j] = 1
+            A[j, i] = 1
+    return A
 
 # spikes_id = spike_monitor.i
 # spike_times = spike_monitor.t/b2.ms
