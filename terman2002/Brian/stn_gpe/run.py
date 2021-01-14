@@ -71,8 +71,8 @@ par_syn = {
     'alphas': 5. / b2.ms,
     'betas': 1. / b2.ms,
     'alphag': 2. / b2.ms,
-    'betag': 0.04 / b2.ms, # 0.08 / b2.ms, for figure3, T2002
-    'g_GtoS': 2.5*b2.nS,
+    'betag': 0.04 / b2.ms,  # 0.08 / b2.ms, for figure3, T2002
+    'g_GtoS': 4.5*b2.nS,
     'g_StoG': 0.03*b2.nS,
     'g_GtoG': 0.06*b2.nS,
     'p_GtoG': 1,
@@ -106,15 +106,14 @@ if __name__ == "__main__":
         'dt': 0.05 * b2.ms,  # ! dt <= 0.05 ms
         "standalone_mode": 1}
 
-    Graph_GtoS = MakeRingGraph_jump(par_g['num'], 4, 0, seed=1)
-    A = nx.to_numpy_array(Graph_GtoS, dtype=int)
-    par_syn['adj_GtoS'] = A
+    Graph_GtoS = MakeRingGraph_jump(par_g['num'], 4)
+    # A = nx.to_numpy_array(Graph_GtoS, dtype=int)
+    par_syn['adj_GtoS'] = Graph_GtoS
 
     n_neighbors = 2
     Graph_GtoG = nx.watts_strogatz_graph(par_g['num'], n_neighbors, 0, seed=1)
     A = nx.to_numpy_array(Graph_GtoG, dtype=int)
     par_syn['adj_GtoG'] = A
-
 
     params = {"par_sim": par_sim,
               "par_syn": par_syn,
