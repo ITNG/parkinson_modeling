@@ -1,20 +1,28 @@
+import os
 import numpy as np
 import pylab as plt
 import brian2 as b2
 from os.path import join
+from copy import deepcopy
 
 # b2.prefs.codegen.target = 'numpy'
 
-if 1:
-    b2.set_device('cpp_standalone',
-                  build_on_run=False,
-                  directory="output")
-    # b2.prefs.devices.cpp_standalone.openmp_threads = 1
+# if 1:
+# b2.prefs.devices.cpp_standalone.openmp_threads = 1
+
+for d in ["data", "output"]:
+    if not os.path.exists(d):
+        os.makedirs(d)
 
 
 def simulate_STN_GPe_population(params):
 
-    b2.start_scope()
+    pid = os.getpid()
+    b2.set_device('cpp_standalone',
+                #   build_on_run=False,
+                  directory=join("output", f"standalone-{pid}"))
+
+    # b2.start_scope()
 
     par_s = params['par_s']
     par_g = params['par_g']
@@ -23,8 +31,9 @@ def simulate_STN_GPe_population(params):
 
     if par_sim['standalone_mode']:
         b2.get_device().reinit()
-        b2.get_device().activate(build_on_run=False,
-                                 directory="output")
+        b2.get_device().activate(
+            # build_on_run=False,
+            directory=join("output", f"standalone-{pid}"))
 
     b2.defaultclock.dt = par_sim['dt']
 
@@ -169,8 +178,10 @@ def simulate_STN_GPe_population(params):
 
     #---------------------------------------------------------------#
 
-    state_mon_s = b2.StateMonitor(neurons_s, ["vs", "i_syn_GtoS", "ca"], record=True)
-    state_mon_g = b2.StateMonitor(neurons_g, ["vg", "i_syn_StoG", "cag"], record=True)
+    state_mon_s = b2.StateMonitor(
+        neurons_s, ["vs", "i_syn_GtoS", "ca"], record=True)
+    state_mon_g = b2.StateMonitor(
+        neurons_g, ["vg", "i_syn_StoG", "cag"], record=True)
     spike_mon_s = b2.SpikeMonitor(neurons_s)
     spike_mon_g = b2.SpikeMonitor(neurons_g)
 
@@ -189,11 +200,11 @@ def simulate_STN_GPe_population(params):
 
     net.run(par_sim['simulation_time'])
 
-    if par_sim['standalone_mode']:
-        b2.get_device().build(directory="output",
-                              compile=True,
-                              run=True,
-                              debug=False)
+    # if par_sim['standalone_mode']:
+    #     b2.get_device().build(directory="output",
+    #                           compile=True,
+    #                           run=True,
+    #                           debug=False)
     monitors = {
         "state_stn": state_mon_s,
         "state_gpe": state_mon_g,
@@ -259,7 +270,6 @@ def to_npz(monitors, subname, indices=[0], save_voltages=False,
         rate_times = mon[1].i
         rate_amp = mon[1].smooth_rate(width=width) / b2.Hz
 
-
         voltages = []
         times = mon[2].t / b2.ms,
         if mon is stn:
@@ -274,11 +284,10 @@ def to_npz(monitors, subname, indices=[0], save_voltages=False,
                  spikes_id=spikes_id,
                  rate_amp=rate_amp,
                  rate_times=rate_times,
-                 voltage_times= times,
+                 voltage_times=times,
                  voltages=voltages,
                  )
-        counter +=1
-
+        counter += 1
 
 
 # spikes_id = spike_monitor.i

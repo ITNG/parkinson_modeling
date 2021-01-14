@@ -1,9 +1,11 @@
 import numpy as np
 import brian2 as b2
 import pylab as plt
-from time import time
 import networkx as nx
+from copy import deepcopy
 from numpy.random import rand
+from time import time as wall_time
+from joblib import Parallel, delayed
 from lib import simulate_STN_GPe_population, to_npz
 from plotting import plot_raster, plot_voltage, plot_voltage2
 
@@ -66,56 +68,80 @@ par_syn = {
     'p_GtoG': 1,
 }
 
-par_s['num'] = 10
-par_g['num'] = 10
-par_s['v0'] = (rand(par_s['num']) * 20 - 10 - 70) * b2.mV
-par_g['v0'] = (rand(par_g['num']) * 20 - 10 - 70) * b2.mV
 
+def run_command(par):
+    start_time = wall_time()
+    monitors = simulate_STN_GPe_population(par)
+    sub_name = "{:.6f}-{:.6f}".format(par['par_syn']['g_StoG']/b2.nS,
+                                      par['par_syn']['g_GtoG']/b2.nS)
 
-par_sim = {
-    'integration_method': "rk4",
-    'simulation_time': 4000 * b2.ms,
-    'dt': 0.05 * b2.ms,  # ! dt <= 0.05 ms
-    "standalone_mode": 1,
-}
+    print("{:s} done in {:10.3f}".format(
+        sub_name, wall_time() - start_time))
+    # to_npz(monitors, subname="d-{}".format(sub_name),
+    #        save_voltages=1, width=50*b2.ms)
+    plot_voltage(monitors, indices=[0, 1, 2],
+                 filename="v-{}".format(sub_name))
+    plot_raster(monitors, filename="sp-{}".format(sub_name), par=par_sim)
+
 
 if __name__ == "__main__":
 
-    K = 2
-    Graph_GtoS = nx.watts_strogatz_graph(par_s['num'], K, 0, seed=1)
+    par_s['num'] = 10
+    par_g['num'] = 10
+    par_s['v0'] = (rand(par_s['num']) * 20 - 10 - 70) * b2.mV
+    par_g['v0'] = (rand(par_g['num']) * 20 - 10 - 70) * b2.mV
+    par_sim = {
+        'integration_method': "rk4",
+        'simulation_time': 4000 * b2.ms,
+        'dt': 0.05 * b2.ms,  # ! dt <= 0.05 ms
+        "standalone_mode": 1}
+
+    n_neighbors = 2
+    Graph_GtoS = nx.watts_strogatz_graph(par_s['num'], n_neighbors, 0, seed=1)
     A = nx.to_numpy_array(Graph_GtoS, dtype=int)
-    # A = np.asarray([[0, 1],[1, 0]])
+
     par_syn['adj_GtoS'] = A
-
-    # for state in states:
-
     params = {"par_sim": par_sim,
               "par_syn": par_syn,
               "par_s": par_s,
               "par_g": par_g}
 
-    g_StoG = np.linspace(0.01, 0.15, 8)
-    g_GtoG = np.linspace(0, 0.15, 8)
-    # par_syn['g_GtoS'] = 5. * b2.nS
+    g_StoG = np.linspace(0.01, 0.1, 3)
+    g_GtoG = np.linspace(0.1, 0.1, 3)
+    par_syn['g_GtoS'] = 2.5 * b2.nS
+    RUN_IN_SERIAL = False
+    RUN_IN_PARALLEL = True
+    n_jobs = 4
 
-    for i in range(len(g_StoG)):
-        for j in range(len(g_GtoG)):
-            start_time = time()
-            print("g_StoG = {:10.6f}, g_GtoG = {:10.6f}".format(
-                g_StoG[i], g_GtoG[j]))
-            sub_name = "{:.6f}-{:.6f}".format(g_StoG[i], g_GtoG[j])
+    # ---------------------------------------------------------------
 
-            par_syn['g_StoG'] = g_StoG[i] * b2.nS
-            par_syn['g_GtoG'] = g_GtoG[j] * b2.nS
+    if RUN_IN_PARALLEL:
+        args = []
+        for i in range(len(g_StoG)):
+            for j in range(len(g_GtoG)):
 
-            monitors = simulate_STN_GPe_population(params)
+                par_syn['g_StoG'] = g_StoG[i] * b2.nS
+                par_syn['g_GtoG'] = g_GtoG[j] * b2.nS
 
-            print("{:s} Done in {:10.3f}".format(
-                sub_name, time() - start_time))
+                args.append(deepcopy(params))
+        Parallel(n_jobs=n_jobs)(map(delayed(run_command), args))
 
-            # to_npz(monitors, subname="d-{}".format(sub_name),
-            #        save_voltages=1, width=50*b2.ms)
+    # ---------------------------------------------------------------
 
-            plot_voltage(monitors, indices=[0, 1, 2],
-                         filename="v-{}".format(sub_name))
-            plot_raster(monitors, filename="sp-{}".format(sub_name), par=par_sim)
+    if RUN_IN_SERIAL:
+        for i in range(len(g_StoG)):
+            for j in range(len(g_GtoG)):
+                start_time = wall_time()
+                print("g_StoG = {:10.6f}, g_GtoG = {:10.6f}".format(
+                    g_StoG[i], g_GtoG[j]))
+                sub_name = "{:.6f}-{:.6f}".format(g_StoG[i], g_GtoG[j])
+                par_syn['g_StoG'] = g_StoG[i] * b2.nS
+                par_syn['g_GtoG'] = g_GtoG[j] * b2.nS
+                monitors = simulate_STN_GPe_population(params)
+                print("{:s} Done in {:10.3f}".format(
+                    sub_name, wall_time() - start_time))
+                # to_npz(monitors, subname="d-{}".format(sub_name),
+                #        save_voltages=1, width=50*b2.ms)
+                # plot_voltage(monitors, indices=[0, 1, 2],
+                #              filename="v-{}".format(sub_name))
+                # plot_raster(monitors, filename="sp-{}".format(sub_name), par=par_sim)
