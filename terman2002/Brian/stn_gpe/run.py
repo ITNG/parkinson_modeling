@@ -1,3 +1,4 @@
+from brian2.groups.group import _display_value
 import numpy as np
 import brian2 as b2
 import pylab as plt
@@ -10,6 +11,15 @@ from lib import simulate_STN_GPe_population, to_npz
 from plotting import plot_raster, plot_voltage, plot_voltage2
 
 np.random.seed(2)
+
+
+def display_time(time):
+
+    hour = int(time/3600)
+    minute = (int(time % 3600)) // 60
+    second = time - (3600. * hour + 60. * minute)
+    print("Done in %d hours %d minutes %09.6f seconds"
+          % (hour, minute, second))
 
 
 par_s = {
@@ -77,8 +87,8 @@ def run_command(par):
 
     print("{:s} done in {:10.3f}".format(
         sub_name, wall_time() - start_time))
-    to_npz(monitors, subname="d-{}".format(sub_name),
-           save_voltages=1, width=50*b2.ms)
+    # to_npz(monitors, subname="d-{}".format(sub_name),
+    #        save_voltages=1, width=50*b2.ms)
     plot_voltage(monitors, indices=[0, 1, 2],
                  filename="v-{}".format(sub_name))
     plot_raster(monitors, filename="sp-{}".format(sub_name), par=par_sim)
@@ -92,7 +102,7 @@ if __name__ == "__main__":
     par_g['v0'] = (rand(par_g['num']) * 20 - 10 - 70) * b2.mV
     par_sim = {
         'integration_method': "rk4",
-        'simulation_time': 1000 * b2.ms,
+        'simulation_time': 2000 * b2.ms,
         'dt': 0.05 * b2.ms,  # ! dt <= 0.05 ms
         "standalone_mode": 1}
 
@@ -106,16 +116,18 @@ if __name__ == "__main__":
               "par_s": par_s,
               "par_g": par_g}
 
-    g_StoG = np.linspace(0.01, 0.1, 2)
-    g_GtoG = np.linspace(0.1, 0.1, 1)
+    g_StoG = np.linspace(0.01, 0.1, 6)
+    g_GtoG = np.linspace(0.0, 0.1, 6)
     par_syn['g_GtoS'] = 2.5 * b2.nS
     RUN_IN_SERIAL = False
     RUN_IN_PARALLEL = True
-    n_jobs = 1
+    n_jobs = 4
 
     # ---------------------------------------------------------------
 
     if RUN_IN_PARALLEL:
+
+        start_time = wall_time()
         args = []
         for i in range(len(g_StoG)):
             for j in range(len(g_GtoG)):
@@ -125,6 +137,7 @@ if __name__ == "__main__":
 
                 args.append(deepcopy(params))
         Parallel(n_jobs=n_jobs)(map(delayed(run_command), args))
+        display_time(wall_time() - start_time)
 
     # ---------------------------------------------------------------
 
