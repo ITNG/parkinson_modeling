@@ -10,7 +10,7 @@ from copy import deepcopy
 # if 1:
 # b2.prefs.devices.cpp_standalone.openmp_threads = 1
 
-for d in ["data", "output"]:
+for d in ["data", "output", "data/npz", "data/figs"]:
     if not os.path.exists(d):
         os.makedirs(d)
 
@@ -19,7 +19,7 @@ def simulate_STN_GPe_population(params):
 
     pid = os.getpid()
     b2.set_device('cpp_standalone',
-                #   build_on_run=False,
+                  #   build_on_run=False,
                   directory=join("output", f"standalone-{pid}"))
 
     # b2.start_scope()
@@ -255,11 +255,11 @@ def to_npz(monitors, subname, indices=[0], save_voltages=False,
     spike_gpe = monitors['spike_gpe']
     state_stn = monitors['state_stn']
     state_gpe = monitors['state_gpe']
-    rate_stn = monitors['rate_stn']
-    rate_gpe = monitors['rate_gpe']
+    lfp_stn = monitors['lfp_stn']
+    lfp_gpe = monitors['lfp_gpe']
 
-    stn = [spike_stn, rate_stn, state_stn]
-    gpe = [spike_gpe, rate_gpe, state_gpe]
+    stn = [spike_stn, lfp_stn, state_stn]
+    gpe = [spike_gpe, lfp_gpe, state_gpe]
     labels = ['stn', 'gpe']
 
     counter = 0
@@ -267,8 +267,8 @@ def to_npz(monitors, subname, indices=[0], save_voltages=False,
         file_name = "{:s}-{:s}".format(labels[counter], subname)
         spikes_id = mon[0].i
         spike_times = mon[0].t / b2.ms
-        rate_times = mon[1].i
-        rate_amp = mon[1].smooth_rate(width=width) / b2.Hz
+        lfp_times = mon[1].t/b2.ms
+        lfp_amps = mon[1].smooth_rate(width=width) / b2.Hz
 
         voltages = []
         times = mon[2].t / b2.ms,
@@ -279,11 +279,11 @@ def to_npz(monitors, subname, indices=[0], save_voltages=False,
             for i in indices:
                 voltages.append(mon[2].vg[i] / b2.mV)
 
-        np.savez(file_name,
+        np.savez(join("data/npz", file_name),
                  spikes_time=spike_times,
                  spikes_id=spikes_id,
-                 rate_amp=rate_amp,
-                 rate_times=rate_times,
+                 lfp_amps=lfp_amps,
+                 lfp_times=lfp_times,
                  voltage_times=times,
                  voltages=voltages,
                  )

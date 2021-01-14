@@ -77,8 +77,8 @@ def run_command(par):
 
     print("{:s} done in {:10.3f}".format(
         sub_name, wall_time() - start_time))
-    # to_npz(monitors, subname="d-{}".format(sub_name),
-    #        save_voltages=1, width=50*b2.ms)
+    to_npz(monitors, subname="d-{}".format(sub_name),
+           save_voltages=1, width=50*b2.ms)
     plot_voltage(monitors, indices=[0, 1, 2],
                  filename="v-{}".format(sub_name))
     plot_raster(monitors, filename="sp-{}".format(sub_name), par=par_sim)
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     par_g['v0'] = (rand(par_g['num']) * 20 - 10 - 70) * b2.mV
     par_sim = {
         'integration_method': "rk4",
-        'simulation_time': 4000 * b2.ms,
+        'simulation_time': 1000 * b2.ms,
         'dt': 0.05 * b2.ms,  # ! dt <= 0.05 ms
         "standalone_mode": 1}
 
@@ -106,12 +106,12 @@ if __name__ == "__main__":
               "par_s": par_s,
               "par_g": par_g}
 
-    g_StoG = np.linspace(0.01, 0.1, 3)
-    g_GtoG = np.linspace(0.1, 0.1, 3)
+    g_StoG = np.linspace(0.01, 0.1, 2)
+    g_GtoG = np.linspace(0.1, 0.1, 2)
     par_syn['g_GtoS'] = 2.5 * b2.nS
     RUN_IN_SERIAL = False
     RUN_IN_PARALLEL = True
-    n_jobs = 4
+    n_jobs = 1
 
     # ---------------------------------------------------------------
 
