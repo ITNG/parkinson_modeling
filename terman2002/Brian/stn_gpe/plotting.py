@@ -84,7 +84,7 @@ def plot_voltage2(monitors, indices, filename, alpha=1):
     # plt.show()
 
 
-def plot_raster(monitors, filename="spikes", markersize=2, par=None):
+def plot_raster(monitors, filename="spikes", markersize=10, par=None):
 
     sp_mon_s = monitors['spike_stn']
     sp_mon_g = monitors['spike_gpe']
@@ -93,10 +93,10 @@ def plot_raster(monitors, filename="spikes", markersize=2, par=None):
     
     fig, ax = plt.subplots(2, figsize=(9, 4), sharex=True)
     ax[0].plot(sp_mon_s.t / b2.ms,
-               sp_mon_s.i, "bo",
+               sp_mon_s.i, "b|",
                ms=markersize)
     ax[1].plot(sp_mon_g.t / b2.ms,
-               sp_mon_g.i, "ro",
+               sp_mon_g.i, "r|",
                ms=markersize)
 
     ax[1].set_xlabel("time [ms]")

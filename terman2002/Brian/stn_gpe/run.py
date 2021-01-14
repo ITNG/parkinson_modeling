@@ -107,7 +107,7 @@ if __name__ == "__main__":
               "par_g": par_g}
 
     g_StoG = np.linspace(0.01, 0.1, 2)
-    g_GtoG = np.linspace(0.1, 0.1, 2)
+    g_GtoG = np.linspace(0.1, 0.1, 1)
     par_syn['g_GtoS'] = 2.5 * b2.nS
     RUN_IN_SERIAL = False
     RUN_IN_PARALLEL = True
