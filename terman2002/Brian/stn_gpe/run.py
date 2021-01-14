@@ -1,11 +1,10 @@
-from operator import sub
 import numpy as np
 import brian2 as b2
 import pylab as plt
 from time import time
 import networkx as nx
 from numpy.random import rand
-from lib import simulate_STN_GPe_population
+from lib import simulate_STN_GPe_population, to_npz
 from plotting import plot_raster, plot_voltage, plot_voltage2
 
 np.random.seed(2)
@@ -48,9 +47,9 @@ par_g = {
     'thngt': -40, 'thhgt': -40, 'sng': -12, 'shg': -12,
     'k1g': 30., 'kcag': 20.,  # Report:15,  Terman Rubin 2002: 20.0
     'phig': 1., 'phing': .05,  # Report: 0.1, Terman Rubin 2002: 0.05
-    'phihg': .05, 'epsg': 0.0001 /b2.ms,
+    'phihg': .05, 'epsg': 0.0001 / b2.ms,
     'thetag_g': 20.,  'thetagH_g': -57., 'sigmagH_g': 2.,
-    'i_ext': -1.2 *b2.pA,  'C': 1 *b2.pF,
+    'i_ext': -1.2 * b2.pA,  'C': 1 * b2.pF,
 }
 
 par_syn = {
@@ -75,9 +74,8 @@ par_g['v0'] = (rand(par_g['num']) * 20 - 10 - 70) * b2.mV
 
 par_sim = {
     'integration_method': "rk4",
-    'simulation_time': 2000 * b2.ms,
-    'dt': 0.05 * b2.ms,  #! dt <= 0.05 ms 
-    "state": "sparse",
+    'simulation_time': 4000 * b2.ms,
+    'dt': 0.05 * b2.ms,  # ! dt <= 0.05 ms
     "standalone_mode": 1,
 }
 
@@ -96,10 +94,9 @@ if __name__ == "__main__":
               "par_s": par_s,
               "par_g": par_g}
 
-    g_StoG = [0.03, 0.016, 0.1] # np.linspace(0.01, 0.1, 4)
-    g_GtoG = [0.06, 0.0, 0.02] # np.linspace(0, 0.1, 4)
+    g_StoG = np.linspace(0.01, 0.15, 8)
+    g_GtoG = np.linspace(0, 0.15, 8)
     # par_syn['g_GtoS'] = 5. * b2.nS
-    
 
     for i in range(len(g_StoG)):
         for j in range(len(g_GtoG)):
@@ -115,6 +112,10 @@ if __name__ == "__main__":
 
             print("{:s} Done in {:10.3f}".format(
                 sub_name, time() - start_time))
+
+            # to_npz(monitors, subname="d-{}".format(sub_name),
+            #        save_voltages=1, width=50*b2.ms)
+
             plot_voltage(monitors, indices=[0, 1, 2],
-                          filename="v-{}".format(sub_name))
-            # plot_raster(monitors, filename="sp-{}".format(sub_name))
+                         filename="v-{}".format(sub_name))
+            plot_raster(monitors, filename="sp-{}".format(sub_name), par=par_sim)

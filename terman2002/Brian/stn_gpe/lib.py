@@ -9,7 +9,7 @@ if 1:
     b2.set_device('cpp_standalone',
                   build_on_run=False,
                   directory="output")
-    b2.prefs.devices.cpp_standalone.openmp_threads = 1
+    # b2.prefs.devices.cpp_standalone.openmp_threads = 1
 
 
 def simulate_STN_GPe_population(params):
@@ -111,7 +111,6 @@ def simulate_STN_GPe_population(params):
     i_syn_GtoG_post = g_GtoG*s_GtoS_pre*(v_rev_GtoG-vg):amp (summed)
     '''
 
-
     #---------------------------------------------------------------#
     neurons_s = b2.NeuronGroup(par_s['num'],
                                eqs_s,
@@ -138,7 +137,7 @@ def simulate_STN_GPe_population(params):
 
     cols, rows = np.nonzero(par_syn['adj_GtoS'])
     syn_GtoS.connect(i=rows, j=cols)
-    # syn_GtoS.connect(i=0, j=0)
+    syn_GtoS.connect(j='i')
 
     syn_StoG = b2.Synapses(neurons_s, neurons_g, eqs_syn_StoG,
                            method=par_sim['integration_method'],
@@ -148,9 +147,9 @@ def simulate_STN_GPe_population(params):
     # syn_StoG.connect(i=0, j=0)
 
     syn_GtoG = b2.Synapses(neurons_g, neurons_g, eqs_syn_GtoG,
-                         method=par_sim['integration_method'],
-                         dt=par_sim['dt'],
-                         namespace=par_syn)
+                           method=par_sim['integration_method'],
+                           dt=par_sim['dt'],
+                           namespace=par_syn)
     syn_GtoG.connect(p=par_syn['p_GtoG'], condition='i != j')
     # syn_GtoG.connect(i=0, j=0)
 
@@ -170,18 +169,23 @@ def simulate_STN_GPe_population(params):
 
     #---------------------------------------------------------------#
 
-    st_mon_s = b2.StateMonitor(neurons_s, ["vs", "i_syn_GtoS"], record=True)
-    st_mon_g = b2.StateMonitor(neurons_g, ["vg", "i_syn_StoG"], record=True)
-    sp_mon_s = b2.SpikeMonitor(neurons_s)
-    sp_mon_g = b2.SpikeMonitor(neurons_g)
+    state_mon_s = b2.StateMonitor(neurons_s, ["vs", "i_syn_GtoS", "ca"], record=True)
+    state_mon_g = b2.StateMonitor(neurons_g, ["vg", "i_syn_StoG", "cag"], record=True)
+    spike_mon_s = b2.SpikeMonitor(neurons_s)
+    spike_mon_g = b2.SpikeMonitor(neurons_g)
+
+    lfp_stn = b2.PopulationRateMonitor(neurons_s)
+    lfp_gpe = b2.PopulationRateMonitor(neurons_g)
 
     net = b2.Network(neurons_s, neurons_g,
-                     st_mon_g, sp_mon_g,
-                     st_mon_s, st_mon_g)
-    
+                     state_mon_g, spike_mon_s,
+                     state_mon_s, spike_mon_g)
+
     net.add(syn_GtoS)
     net.add(syn_StoG)
     net.add(syn_GtoG)
+    net.add(lfp_gpe)
+    net.add(lfp_stn)
 
     net.run(par_sim['simulation_time'])
 
@@ -190,8 +194,16 @@ def simulate_STN_GPe_population(params):
                               compile=True,
                               run=True,
                               debug=False)
+    monitors = {
+        "state_stn": state_mon_s,
+        "state_gpe": state_mon_g,
+        "spike_stn": spike_mon_s,
+        "spike_gpe": spike_mon_g,
+        "lfp_stn": lfp_stn,
+        "lfp_gpe": lfp_gpe,
+    }
 
-    return st_mon_s, st_mon_g, sp_mon_s, sp_mon_g
+    return monitors
 
 
 def merge_dict(dict1, dict2):
@@ -222,7 +234,58 @@ def visualise_connectivity(S, file_name):
 
     plt.savefig(file_name)
     plt.close()
+# -------------------------------------------------------------------
 
+
+def to_npz(monitors, subname, indices=[0], save_voltages=False,
+           width=1*b2.ms):
+
+    spike_stn = monitors['spike_stn']
+    spike_gpe = monitors['spike_gpe']
+    state_stn = monitors['state_stn']
+    state_gpe = monitors['state_gpe']
+    rate_stn = monitors['rate_stn']
+    rate_gpe = monitors['rate_gpe']
+
+    stn = [spike_stn, rate_stn, state_stn]
+    gpe = [spike_gpe, rate_gpe, state_gpe]
+    labels = ['stn', 'gpe']
+
+    counter = 0
+    for mon in [stn, gpe]:
+        file_name = "{:s}-{:s}".format(labels[counter], subname)
+        spikes_id = mon[0].i
+        spike_times = mon[0].t / b2.ms
+        rate_times = mon[1].i
+        rate_amp = mon[1].smooth_rate(width=width) / b2.Hz
+
+
+        voltages = []
+        times = mon[2].t / b2.ms,
+        if mon is stn:
+            for i in indices:
+                voltages.append(mon[2].vs[i] / b2.mV)
+        else:
+            for i in indices:
+                voltages.append(mon[2].vg[i] / b2.mV)
+
+        np.savez(file_name,
+                 spikes_time=spike_times,
+                 spikes_id=spikes_id,
+                 rate_amp=rate_amp,
+                 rate_times=rate_times,
+                 voltage_times= times,
+                 voltages=voltages,
+                 )
+        counter +=1
+
+
+
+# spikes_id = spike_monitor.i
+# spike_times = spike_monitor.t/b2.ms
+
+# rate_times = rate_monitor.t/b2.ms
+# rate_amp = rate_monitor.smooth_rate(width=width) / b2.Hz
 
 #Synapse equations----------------------------------------------#
 # syn_StoG_eqs = '''

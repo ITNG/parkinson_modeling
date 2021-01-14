@@ -1,5 +1,4 @@
 import os
-from matplotlib import markers
 import numpy as np
 import brian2 as b2
 import pylab as plt
@@ -10,7 +9,9 @@ if not os.path.exists("data/figs"):
 
 
 def plot_voltage(monitors, indices, filename):
-    st_mon_s, st_mon_g = monitors[:2]
+
+    st_mon_s = monitors['state_stn']
+    st_mon_g = monitors['state_gpe']
 
     _, ax = plt.subplots(nrows=len(indices), ncols=2,
                            figsize=(15, 1.5*len(indices)), sharex=True)
@@ -35,11 +36,14 @@ def plot_voltage(monitors, indices, filename):
 
     plt.tight_layout()
     plt.savefig(join("data/figs", '{}.png'.format(filename)))
+    plt.close()
     # plt.show()
 
 
 def plot_voltage2(monitors, indices, filename, alpha=1):
-    st_mon_s, st_mon_g = monitors[:2]
+
+    st_mon_s = monitors['state_stn']
+    st_mon_g = monitors['state_gpe']
 
     fig, ax = plt.subplots(4, figsize=(8, 5), sharex=True)
 
@@ -76,11 +80,17 @@ def plot_voltage2(monitors, indices, filename, alpha=1):
 
     plt.tight_layout()
     plt.savefig(join("data/figs", '{}.png'.format(filename)))
-    plt.show()
+    plt.close()
+    # plt.show()
 
 
-def plot_raster(monitors, filename="spikes", markersize=2):
-    sp_mon_s, sp_mon_g = monitors[2:]
+def plot_raster(monitors, filename="spikes", markersize=2, par=None):
+
+    sp_mon_s = monitors['spike_stn']
+    sp_mon_g = monitors['spike_gpe']
+    t_sim = par['simulation_time']/b2.ms
+    
+    
     fig, ax = plt.subplots(2, figsize=(9, 4), sharex=True)
     ax[0].plot(sp_mon_s.t / b2.ms,
                sp_mon_s.i, "bo",
@@ -92,6 +102,8 @@ def plot_raster(monitors, filename="spikes", markersize=2):
     ax[1].set_xlabel("time [ms]")
     ax[0].set_ylabel("STN neuron id")
     ax[1].set_ylabel("GPe neuron id")
+    ax[1].set_xlim(0, t_sim)
     plt.tight_layout()
     plt.savefig(join("data/figs", '{}.png'.format(filename)))
+    plt.close()
     # plt.show()
