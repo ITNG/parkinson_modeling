@@ -37,7 +37,7 @@ par = {
     'ah0thl': 0.128,
     'bh0thl': 4,
     'phihthl': 1,
-    'iext': 0.45*b2.pA,
+    'iext': 0.0*b2.pA,
 
 }
 # sensorimotor control
@@ -80,18 +80,17 @@ if __name__ == "__main__":
         
         start_time = time()
 
-        I_sm1 = b2.TimedArray([0.0, 2., 0., 5., 0., 10., 0.]*b2.pA, dt=100*b2.ms)
+        I_sm1 = b2.TimedArray([0, 2, 0, 5, 0, 10, 0]*b2.pA, dt=100*b2.ms)
         par_sim['I_sm'] = I_sm1
         par['i_ext'] = 0.0
         state_monitor = simulate_Thl_cell(par, par_sim)
-        print("Done in {}".format(time() - start_time))
 
         plot_data(state_monitor, ax[0])
         plot_current(state_monitor, ax[1])
 
 
 
-        I_sm2 = b2.TimedArray([0.0, -0.5, 0., -1., 0., ]*b2.pA, dt=150*b2.ms)
+        I_sm2 = b2.TimedArray([0,0,-0.5,0,0,-1,0,0]*b2.pA, dt=100*b2.ms)
         par_sim['I_sm'] = I_sm2
         par['i_ext'] = 0.0
         state_monitor = simulate_Thl_cell(par, par_sim)
