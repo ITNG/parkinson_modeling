@@ -76,7 +76,7 @@ def simulate_MSN_cell(par, par_sim):
     dm_Nas/dt = ( minf_Nas - m_Nas ) / tau_m_Nas :1
     iNas = gnasbar * m_Nas *(vm - eNas) :amp
 
-    membrain_Im = Iapp-iLeak-iNa-iK-iKir-iKaf-iKrp-iNap-iNas :amp # iKas
+    membrain_Im = Iapp-iLeak-iNa-iK-iKir-iKaf-iKrp-iNap-iNas-iKas :amp  
     dvm/dt = membrain_Im/Cm :volt
     '''
 

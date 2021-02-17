@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import brian2 as b2
 import pylab as plt
@@ -7,11 +8,14 @@ from lib import (clean_directory, simulate_MSN_cell,
                  plot_current)
 from input_factory import get_step_current
 
+if not os.path.exists("data"):
+    os.makedirs("data")
+
 if __name__ == "__main__":
 
     par = {
         'num': 1,
-        'v0': -60*b2.mV,
+        'v0': -40*b2.mV,
         'Cm': 1 * b2.uF,
         # 'Iapp': 1.67 * b2.uA,
 
@@ -62,7 +66,7 @@ if __name__ == "__main__":
     def plot():
         current_unit = b2.uA
         start_time = time()
-        i_stim = [1.38]
+        i_stim = [1.67]
         _, ax = plt.subplots(len(i_stim)+3, figsize=(10, 7), sharex=True)
         for ii in range(len(i_stim)):
 
@@ -82,7 +86,7 @@ if __name__ == "__main__":
             plot_current(st_mon, ax[-1], current_unit)
         print("Done in {:.3f}".format(time() - start_time))
         plt.tight_layout()
-        plt.savefig('figure_1.png')
+        plt.savefig('data/figure_1.png')
         plt.close()
 
     plot()
