@@ -51,7 +51,7 @@ if __name__ == "__main__":
     def plot():
         current_unit = b2.uA
         start_time = time()
-        i_stim = [0.]
+        i_stim = [2.]
         _, ax = plt.subplots(len(i_stim), figsize=(10, 3.5))
         for ii in range(len(i_stim)):
 
