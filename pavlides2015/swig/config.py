@@ -18,7 +18,7 @@ sim_params = {
 # wCC = 6.17
 true_params = np.array([4.87, 1.33, 9.98, 8.93, 0.53, 6.17])
 num_workers = 8
-num_simulations = 500
+num_simulations = 100
 method = 'SNPE'
 
 prior_min = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

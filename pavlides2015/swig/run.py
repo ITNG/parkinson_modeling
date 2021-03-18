@@ -31,7 +31,7 @@ if __name__ == "__main__":
         obs = simulator(sim_params, true_params)
         plot_data(obs, ax[1])
 
-        plt.savefig("data/fig.png")
+        plt.savefig("data/test.png")
         plt.close()
 
     # --------------------------------------------------------------#
@@ -56,10 +56,10 @@ if __name__ == "__main__":
         display_time(time() - start_time)
 
         fig, axes = pairplot(samples,
-                             #    limits=[[prior_min[0], prior_max[0]],
-                             #            [prior_min[1], prior_max[1]]],
-                             #    ticks=[[prior_min[0], prior_max[0]],
-                             #           [prior_min[1], prior_max[1]]],
+                             limits=[[prior_min[0], prior_max[0]],
+                                     [prior_min[1], prior_max[1]]],
+                             ticks=[[prior_min[0], prior_max[0]],
+                                    [prior_min[1], prior_max[1]]],
                              labels=['SG', 'GS', 'CS', 'SC', 'GG', 'CC'],
                              figsize=(5, 5),
                              points=true_params,
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         plt.close()
 
     # test_example()
-    run_main()
+    # run_main()
 
     # sol = simulator(sim_params, true_params)
     # t = sol['t']
