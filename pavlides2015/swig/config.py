@@ -17,11 +17,11 @@ sim_params = {
 # wGG = 0.53
 # wCC = 6.17
 true_params = np.array([4.87, 1.33, 9.98, 8.93, 0.53, 6.17])
-num_workers = 4
+num_workers = 8
 num_simulations = 500
 method = 'SNPE'
 
 prior_min = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 prior_max = [10.0, 10.0, 20.0, 20.0, 10.0, 10.0]
 num_samples = 10000
-num_threads = 2
+num_threads = 1
