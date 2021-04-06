@@ -19,10 +19,12 @@ def simulate_GPe_cell(par, par_sim):
         directory=join("output", f"standalone-{pid}"))
 
     num = par['num']
-    input_current = par['iapp']
+    if not par_sim['ADD_SPIKE_MONITOR']:
+        input_current = par['iapp']
 
     eqs = '''
-    Iapp = input_current(t, i): amp 
+    # Iapp = input_current(t, i): amp 
+    Iapp :amp
 
     minf_Naf = 1.0 / (1.0 + exp((-39*mV - vg)/(5*mV))) :1
     hinf_Naf = 1.0 / (1.0 + exp(((-48*mV) - vg)/(-2.8*mV))) :1
@@ -141,13 +143,32 @@ def simulate_GPe_cell(par, par_sim):
     neuron.m_Cah = 'minf_Cah'
     neuron.m_Sk = 'minf_Sk'
 
+    if par_sim['ADD_SPIKE_MONITOR']:
+        neuron.Iapp = par['iapp']
+
     st_mon = b2.StateMonitor(neuron, par['record_from'], record=True)
+    if par_sim['ADD_SPIKE_MONITOR']:
+        sp_mon = b2.SpikeMonitor(neuron, variables='vg', record=True)
 
     net = b2.Network(neuron)
     net.add(st_mon)
+    if par_sim['ADD_SPIKE_MONITOR']:
+        net.add(sp_mon)
     net.run(par_sim['simulation_time'])
 
-    return st_mon
+    if par_sim['ADD_SPIKE_MONITOR']:
+        return sp_mon, neuron
+    else:
+        return st_mon
+
+
+    # st_mon = b2.StateMonitor(neuron, par['record_from'], record=True)
+
+    # net = b2.Network(neuron)
+    # net.add(st_mon)
+    # net.run(par_sim['simulation_time'])
+
+    # return st_mon
 # -------------------------------------------------------------------
 
 

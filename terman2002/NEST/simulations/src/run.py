@@ -29,8 +29,8 @@ def batch_run(n_jobs):
 
 
 n_jobs = 4
-g_StoG = np.linspace(0.0, 0.5, 11)
-g_GtoG = np.linspace(0.0, 0.5, 11)
+g_StoG = np.linspace(0.0, 0.1, 6)
+g_GtoG = np.linspace(0.0, 0.1, 6)
 
 
 start = time()

@@ -157,8 +157,8 @@ class TER_RUB():
         conn_dict_GG = {'rule': "all_to_all"}
         conn_dict_SG = {'rule': 'fixed_outdegree',
                         'outdegree': 1, 'autapses': False, 'multapses': False}
-        conn_dict_GS = {'rule': 'fixed_outdegree',
-                        'outdegree': 3, 'autapses': False, 'multapses': False}
+        conn_dict_GS = {'rule': 'fixed_indegree',
+                        'indegree': 2, 'autapses': False, 'multapses': False}
 
         nest.Connect(self.gpe_cells, self.gpe_cells,
                      conn_spec=conn_dict_GG,
@@ -289,20 +289,24 @@ if __name__ == "__main__":
         "GABA_B_Tau_1": 0.5,
         "GABA_B_Tau_2": 12.5,
         "GABA_B_E_rev": -100.0,
+        "AMPA_g_peak": 0.1,
+        "GABA_A_g_peak": 0.33,
+        "GABA_B_g_peak": 0.33,
+
     }
 
     par_simulation = {
         "dt": 0.2,
         'state': "Te2002",
         "nthreads": 1,
-        "I_e": -0.5,
+        "I_e": -.5,
         't_transition': 500.,
         't_simulation': 1500.,
         'n_stn': 10,
         'n_gpe': 10,
     }
 
-    par_syn_GtoS = {'delay': 1.0, 'weight': 1.0}
+    par_syn_GtoS = {'delay': 1.0, 'weight': 2.5}
     par_syn_StoG = {'delay': 1.0, 'weight': 0.03}
     par_syn_GtoG = {'delay': 1.0, 'weight': 0.06}
 
@@ -331,7 +335,7 @@ if __name__ == "__main__":
         sol.build()
         sol.connect()
         sol.run()
-        # sol.plot_raster(filename="s-"+sub_name)
+        sol.plot_raster(filename="s-"+sub_name)
         sol.plot_voltages(filename="v-"+sub_name)
         del sol
 

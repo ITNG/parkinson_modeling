@@ -3,7 +3,11 @@ import brian2 as b2
 import pylab as plt
 from time import time
 from os.path import join
-from lib import plot_current, simulate_Thl_cell, plot_data, make_grid
+from lib import (plot_current,
+                 simulate_Thl_cell_fig2,
+                 simulate_Thl_cell_fig3,
+                 plot_data,
+                 make_grid)
 from matplotlib.gridspec import GridSpec
 
 par = {
@@ -42,10 +46,10 @@ par = {
 }
 # sensorimotor control
 par_SM = {
-    'imsmthl': 8,
-    'tmsmthl': 25,
-    'wsmthl': 5,
-    'dsmthl': 80,
+    'imsmthl': 8*b2.pA,
+    'tmsmthl': 25*b2.ms,
+    'wsmthl': 5*b2.ms,
+    'dsmthl': 80*b2.ms,
     'sigym': 0.001,
 }
 
@@ -66,7 +70,6 @@ par_sim = {
 
 if __name__ == "__main__":
 
-
     def figure2():
 
         fig = plt.figure(figsize=(10, 6))
@@ -77,34 +80,44 @@ if __name__ == "__main__":
         ax3 = plt.subplot(gs[3:5])
         ax4 = plt.subplot(gs[5])
         ax = [ax1, ax2, ax3, ax4]
-        
+
         start_time = time()
 
         I_sm1 = b2.TimedArray([0, 2, 0, 5, 0, 10, 0]*b2.pA, dt=100*b2.ms)
         par_sim['I_sm'] = I_sm1
-        par['i_ext'] = 0.0
-        state_monitor = simulate_Thl_cell(par, par_sim)
+        state_monitor = simulate_Thl_cell_fig2(par, par_sim)
 
         plot_data(state_monitor, ax[0])
         plot_current(state_monitor, ax[1])
 
-
-
-        I_sm2 = b2.TimedArray([0,0,-0.5,0,0,-1,0,0]*b2.pA, dt=100*b2.ms)
+        I_sm2 = b2.TimedArray([0, 0, -0.5, 0, 0, -1, 0, 0]*b2.pA, dt=100*b2.ms)
         par_sim['I_sm'] = I_sm2
         par['i_ext'] = 0.0
-        state_monitor = simulate_Thl_cell(par, par_sim)
+        state_monitor = simulate_Thl_cell_fig2(par, par_sim)
         print("Done in {}".format(time() - start_time))
 
         plot_data(state_monitor, ax[2])
         plot_current(state_monitor, ax[3], xlabel="Time [ms]")
-
 
         [ax[i].set_xticks([]) for i in range(3)]
         [ax[i].set_xlim([0, 1000]) for i in range(4)]
         plt.savefig(join("data", "figure2.png"))
         plt.show()
 
+    def figure3():
 
+        fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(10, 4), sharex=True)
+        start_time = time()
+        par_sim['I_sm'] = 0*b2.pA
+        par_sim['i_ext'] = 0.*b2.pA
+        par_ = {**par, **par_SM}
+        state_monitor = simulate_Thl_cell_fig3(par_, par_sim)
+        plot_data(state_monitor, ax[0])
+        plot_current(state_monitor, ax[1])
+        plt.savefig(join("data", "figure3.png"))
+        plt.show()
 
-    figure2()
+        print("Done in {}".format(time() - start_time))
+
+    # figure2()
+    figure3()

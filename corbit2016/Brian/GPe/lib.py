@@ -3,6 +3,7 @@ import numpy as np
 import pylab as plt
 import brian2 as b2
 from os.path import join
+from matplotlib.gridspec import GridSpec
 
 
 # -------------------------------------------------------------------
@@ -18,10 +19,14 @@ def simulate_GPe_cell(par, par_sim):
         directory=join("output", f"standalone-{pid}"))
 
     num = par['num']
-    input_current = par['iapp']
+    if not par_sim['ADD_SPIKE_MONITOR']:
+        input_current = par['iapp']
 
     eqs = '''
-    Iapp = input_current: amp 
+    
+    Iapp = input_current(t, i): amp  
+    # Iapp :amp
+
 
     minf_Naf = 1.0 / (1.0 + exp((-39*mV - vg)/(5*mV))) :1
     hinf_Naf = 1.0 / (1.0 + exp(((-48*mV) - vg)/(-2.8*mV))) :1
@@ -32,8 +37,6 @@ def simulate_GPe_cell(par, par_sim):
     dh_Naf/dt = (hinf_Naf - h_Naf)/tauh_Naf :1
     ds_Naf/dt = (sinf_Naf - s_Naf)/taus_Naf :1
     iNaf = gnafbar*m_Naf**3*h_Naf*s_Naf*(vg-eNa) :amp
-
-    iLeak = gleak * (vg-eLeak) :amp
 
     minf_Nap = 1.0 / (1.0 + exp((-57.7*mV - vg)/(5.7*mV))) :1
 	hinf_Nap = 0.154 + (1.0 - 0.154)/ (1.0 + exp((-57*mV - vg)/(-4.*mV))) :1
@@ -48,6 +51,8 @@ def simulate_GPe_cell(par, par_sim):
     # ds_Nap/dt = (sinf_Nap - s_Nap)/taus_Nap :1
     # iNap = gnapbar*m_Nap**3*h_Nap*s_Nap*(vg-eNa) :amp
     iNap = gnapbar*m_Nap**3*h_Nap*(vg-eNa) :amp
+
+    iLeak = gleak * (vg-eLeak) :amp
 
     minf_Kv2 = 1.0 / (1.0 + exp((-33.2*mV - vg)/(9.1*mV))) :1
 	hinf_Kv2 = 0.2 + (0.8) / (1.0 + exp((-20*mV - vg)/(-10.*mV))) :1
@@ -65,7 +70,7 @@ def simulate_GPe_cell(par, par_sim):
     dh_Kv3/dt = (hinf_Kv3 - h_Kv3)/tauh_Kv3 :1 
     iKv3 = gkv3bar*m_Kv3**4*h_Kv3*(vg-eK) :amp
 
-    # Merged with kv4s
+    # this is merged with kv4s
     # minf_Kv4f = 1.0 / (1.0 + exp((-49*mV - vg)/(12.5*mV))) :1
 	# hinf_Kv4f = 1.0 / (1.0 + exp((-83*mV - vg)/(-10.*mV))) :1
 	# taum_Kv4f = 0.25*ms + (6.75*ms)/(exp((-49*mV - vg)/(29*mV)) + exp((-49*mV - vg)/(-29.*mV))) :second
@@ -78,18 +83,19 @@ def simulate_GPe_cell(par, par_sim):
     minf_Kv4s = 1.0 / (1.0 + exp((-49*mV - vg)/(12.5*mV))) :1
 	hinf_Kv4s = 1.0 / (1.0 + exp((-83*mV - vg)/(-10.*mV))) :1
 	taum_Kv4s = 0.25*ms + (6.75*ms)/(exp((-49*mV - vg)/(29*mV)) + exp((-49*mV - vg)/(-29.*mV))) :second
-	tauh_Kv4s = 7*ms + (14*ms)/(exp((-83*mV - vg)/(10*mV)) + exp((-83*mV - vg)/(-10.*mV))) :second
+	tauh_Kv4s = 15*ms + (85*ms)/(exp((-83*mV - vg)/(10*mV)) + exp((-83*mV - vg)/(-10.*mV))) :second
     dm_Kv4s/dt = (minf_Kv4s - m_Kv4s)/taum_Kv4s :1
     dh_Kv4s/dt = (hinf_Kv4s - h_Kv4s)/tauh_Kv4s :1
     iKv4s = gkv4sbar*m_Kv4s**4*h_Kv4s*(vg-eK) :amp
     
-    minf_Kc = 1.0 / (1.0 + exp((-61*mV - vg)/(19.5*mV))) :1
-	taum_Kc = 6.7*ms + (93.3*ms)/(exp((-61*mV - vg)/(35.*mV)) + exp((-61*mV - vg)/(-25.*mV))) :second
-    dm_Kc/dt = (minf_Kc - m_Kc)/taum_Kc :1
-    iKc = gkcbar*m_Kc**4*(vg-eK) :amp
+    minf_Kcnq = 1.0 / (1.0 + exp((-61*mV - vg)/(19.5*mV))) :1
+	taum_Kcnq = 6.7*ms + (93.3*ms)/(exp((-61*mV - vg)/(35.*mV)) + exp((-61*mV - vg)/(-25.*mV))) :second
+    dm_Kcnq/dt = (minf_Kcnq - m_Kcnq)/taum_Kcnq :1
+    iKcnq = gkcnqbar*m_Kcnq**4*(vg-eK) :amp
 
     minf_Hcn = 1.0 / (1.0 + exp((-76.4*mV - vg)/(-3.3*mV))) :1
-	taum_Hcn = (3625*ms)/(exp((-76.4*mV - vg)/(6.56*mV)) + exp((-76.4*mV - vg)/(-7.48*mV))) :second
+	taumhcn = (3625*ms)/(exp((-76.4*mV - vg)/(6.56*mV)) + exp((-76.4*mV - vg)/(-7.48*mV))) :second
+    taum_Hcn = taumhcn * int(taumhcn >= 0.01*ms) + 0.01*ms * int(taumhcn < 0.01*ms):second
     dm_Hcn/dt = (minf_Hcn - m_Hcn)/taum_Hcn :1
     iHcn = ghcnbar*m_Hcn*(vg-eCat) :amp
 
@@ -97,18 +103,21 @@ def simulate_GPe_cell(par, par_sim):
     dm_Cah/dt = (minf_Cah - m_Cah)/(0.2*ms) :1
     iCah  = gcahbar*m_Cah*(vg-eCa) :amp
 
-    # Ca Concentration
-    dc_Ca/dt = -iCah*1/uA*3000/(2*96485)*1/ms- 0.4*(c_Ca - 0.01)*1/ms : 1
-    Gcan = c_Ca**4.6 :1
+    # Ca Concentration ----------------------------------------------
+    dc_Ca/dt = -iCah*3000/(2*96485)/(uA)*(molar/second)- 0.4/ms*(c_Ca - 0.00001*mmolar) : mmolar
 
-    # KSK Current (Ca-dependent)
-    minf_ksk = Gcan/(Gcan + Gcan50) :1
-    tau_m_ksk = (76*ms-72*ms*c_Ca/5) * int(c_Ca < 5.) + 4*ms * int(c_Ca >= 5) :second
-    dm_ksk/dt = (minf_ksk - m_ksk) / tau_m_ksk :1
-    iKsk = gkskbar*m_ksk*(vg-eK) :amp
-
-
-    membrain_Im = Iapp-iNaf-iLeak-iNap-iKv2-iKv3-iKv4s-iCah-iHcn-iKc-iKsk :amp
+    # SK Current (Ca-dependent)
+    minf_Sk = c_Ca**4.6/(c_Ca**4.6 + Gcan50) :1
+    tau_m_Sk = (76*ms-72*ms*c_Ca/mmolar/5) * int(c_Ca/mmolar < 5.) + 4*ms * int(c_Ca/mmolar >= 5) :second
+    # tau_m_Sk = 4.0*ms:second
+    dm_Sk/dt = (minf_Sk - m_Sk) / tau_m_Sk :1
+    iSk = gskbar*m_Sk*(vg-eK) :amp
+    
+    # membrain_Im = Iapp-iNaf-iNap-iLeak-iKv2-iKv3-iKv4s
+    #               -iKcnq-iHcn-iCah-iSk :amp
+    
+    membrain_Im = Iapp-iNaf-iLeak-iNap-iKv2-iKv3-iKv4s
+                 -iKcnq-iHcn-iCah-iSk :amp
 
     dvg/dt = membrain_Im/Cm :volt
     '''
@@ -123,22 +132,42 @@ def simulate_GPe_cell(par, par_sim):
                             )
 
     neuron.vg = par['v0']
-    # neuron.m_Naf = 'minf_Naf'
-    # neuron.h_Naf = 'hinf_Naf'
-    # neuron.s_Naf = 'sinf_Naf'
-    # neuron.m_Nap = 'minf_Nap'
-    # neuron.h_Nap = 'hinf_Nap'
-    # neuron.m_Cah = 'minf_Cah'
-    # neuron.m_ksk = 'minf_ksk'
-    # neuron.m_Hcn = 'minf_Hcn'
+    neuron.m_Naf = 'minf_Naf'
+    neuron.h_Naf = 'hinf_Naf'
+    neuron.s_Naf = 'sinf_Naf'
+    neuron.m_Nap = 'minf_Nap'
+    neuron.h_Nap = 'hinf_Nap'
+    neuron.m_Kv2 = 'minf_Kv2'
+    neuron.h_Kv2 = 'hinf_Kv2'
+    neuron.m_Kv3 = 'minf_Kv3'
+    neuron.h_Kv3 = 'hinf_Kv3'
+    # neuron.m_Kv4f = 'minf_Kv4f'
+    # neuron.h_Kv4f = 'hinf_Kv4f'
+    neuron.m_Kv4s = 'minf_Kv4s'
+    neuron.h_Kv4s = 'hinf_Kv4s'
+    neuron.m_Kcnq = 'minf_Kcnq'
+    neuron.m_Hcn = 'minf_Hcn'
+    neuron.m_Cah = 'minf_Cah'
+    neuron.m_Sk = 'minf_Sk'
+    
+    if par_sim['ADD_SPIKE_MONITOR']:
+        neuron.Iapp = par['iapp']
+
 
     st_mon = b2.StateMonitor(neuron, par['record_from'], record=True)
+    if par_sim['ADD_SPIKE_MONITOR']:
+        sp_mon = b2.SpikeMonitor(neuron, variables='vg', record=True)
 
     net = b2.Network(neuron)
     net.add(st_mon)
+    if par_sim['ADD_SPIKE_MONITOR']:
+        net.add(sp_mon)
     net.run(par_sim['simulation_time'])
 
-    return st_mon
+    if par_sim['ADD_SPIKE_MONITOR']:
+        return sp_mon, neuron
+    else:
+        return st_mon
 # -------------------------------------------------------------------
 
 
@@ -159,8 +188,32 @@ def plot_current(st_mon, ax, current_unit=b2.pA):
     ax.set_xlabel("t [ms]", fontsize=14)
     ax.set_ylabel(ylabel, fontsize=14)
     I = st_mon.Iapp[0] / current_unit
-    ax.set_ylim(np.min(I)*1.1, np.max(I)*1.1)
+    # ax.set_ylim(np.min(I)*1.1, np.max(I)*1.1)
 
 
 def clean_directory():
     os.system("rm -rf output")
+
+
+def plot_channel_currents(st_mon, ax, current_unit=b2.uA, alpha=0.7):
+
+    ax[0].plot(st_mon.t / b2.ms, st_mon.iNaf[0] / b2.mA, lw=1, alpha=alpha, label="Naf")
+    ax[0].plot(st_mon.t / b2.ms, st_mon.iKv3[0] / b2.mA, lw=1, alpha=alpha, label="Kv3")
+
+    ax[1].plot(st_mon.t / b2.ms, st_mon.iNap[0] /current_unit, lw=1, alpha=alpha, label="Nap")
+    # ax[1].plot(st_mon.t / b2.ms, st_mon.iLeak[0] / current_unit, lw=1, alpha=alpha, label="Leak")
+    ax[1].plot(st_mon.t / b2.ms, st_mon.iKv2[0] / current_unit, lw=1, alpha=alpha, label="Kv2")
+    # ax[1].plot(st_mon.t / b2.ms, st_mon.iKv4f[0] / current_unit, lw=1, alpha=alpha, label="Kv4f")
+    ax[1].plot(st_mon.t / b2.ms, st_mon.iKv4s[0] / current_unit, lw=1, alpha=alpha, label="Kv4s")
+    ax[1].plot(st_mon.t / b2.ms, st_mon.iKcnq[0] / current_unit, lw=1, alpha=alpha, label="Kcnq")
+    # ax[1].plot(st_mon.t / b2.ms, st_mon.iHcn[0] / current_unit, lw=1, alpha=alpha, label="Hcn")
+    ax[1].plot(st_mon.t / b2.ms, st_mon.iCah[0] / current_unit, lw=1, alpha=alpha, label="Cah")
+    ax[1].plot(st_mon.t / b2.ms, st_mon.iSk[0] / current_unit, lw=2, alpha=1, label="Sk")
+
+    ylabel = "I [{}]".format(str(current_unit))
+    ax[1].set_xlabel("t [ms]", fontsize=14)
+    
+    ax[0].set_ylabel("I [mA]", fontsize=14)
+    ax[1].set_ylabel(ylabel, fontsize=14)
+    ax[0].legend(ncol=1, loc='lower right', frameon=False)
+    ax[1].legend(ncol=1, loc='lower right', frameon=False)

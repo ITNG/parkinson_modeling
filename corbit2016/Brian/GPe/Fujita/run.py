@@ -23,7 +23,7 @@ if __name__ == "__main__":
         'eNa': 50*b2.mV,
         'eLeak': -60*b2.mV,
         'eK': -90.*b2.mV,
-        'eCa': 130 * b2.mV,
+        'eCa': 130 *b2.mV,
         'eCat': -30*b2.mV,
 
         'gnafbar': 50*b2.mS,
@@ -49,7 +49,6 @@ if __name__ == "__main__":
         'dt': 0.01 * b2.ms,
     }
 
-    # Figure 1e -----------------------------------------------------
 
     def plot_details(filename='figure_1.png'):
         par['record_from'] = ["vg", "Iapp",
@@ -105,10 +104,41 @@ if __name__ == "__main__":
         plt.tight_layout()
         plt.savefig(filename)
         plt.close()
+
+    
+    def plot_IF(filename="IF.png"):
+        duration = 2 *b2.second
+        par_sim['ADD_SPIKE_MONITOR'] = True
+        par['record_from'] = ["vg"]
+        par_sim['simulation_time'] = duration
+        current_unit = b2.uA
+        start_time = time()
+        i_stim = np.linspace(0, 1, 30) * 10
+        par['num'] = len(i_stim)
+        firing_rate = []
+
+        _, ax = plt.subplots(1, figsize=(6, 4))
+        # par['iapp'] = input_current
+        par['iapp'] = "i * ({}) * uA/(N-1)".format(max(i_stim))
+        sp_mon, group = simulate_GPe_cell(par, par_sim)
+        firing_rate = sp_mon.count / duration
+
+        print("Done in {:.3f}".format(time() - start_time))
+
+        ax.plot(group.Iapp/b2.uA, firing_rate,
+                lw=1, marker="o", color='k')
+        ax.set_xlim(-2, max(i_stim))
+        ax.set_xlabel("I(uA)")
+        ax.set_ylabel("Firing rate(sp/s)")
+        plt.tight_layout()
+        plt.savefig('{}'.format(filename))
+        plt.close()
     
     # plot("figure_0.png")
-    plot_details('figure_1.png')
+    plot_IF()
+    # plot_details('figure_1.png')
     clean_directory()
+
 
 
 # input_current = b2.TimedArray([0, i_stim[ii],
