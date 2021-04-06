@@ -20,6 +20,7 @@ true_params = np.array([4.87, 1.33, 9.98, 8.93, 0.53, 6.17])
 num_workers = 8
 num_simulations = 100
 method = 'SNPE'
+num_rounds = 2
 
 prior_min = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 prior_max = [10.0, 10.0, 20.0, 20.0, 10.0, 10.0]
