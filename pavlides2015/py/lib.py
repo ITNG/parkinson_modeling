@@ -4,12 +4,12 @@ from numpy import exp
 from time import time
 from numpy import pi, sin
 from numpy.random import normal, rand
-from main import *
+from run import *
 
 # -----------------------------------------------------------------------------
 
 
-def main():
+def simulate():
     initial_condition = [0] * num
     max_dalay = np.max(delays)
 
@@ -57,21 +57,21 @@ def set_history(hist, nstart, maxdelay):
         y[i, :(nstart+1)] = hist[i]
 
 
-def euler(f, h):
+def euler_integrator(f, h, filename="data/euler_interp"):
 
     for i in range(nstart, nstart + num_iterarion):
         dy = h * f(t[i], i)
         y[:, i+1] = y[:, i] + dy
         t[i+1] = (i - nstart + 1) * dt
 
-    np.savez("data/euler_interp", t=t, y=y)
+    np.savez(filename, t=t, y=y)
 # -----------------------------------------------------------------------------
 
 
-def plot_data():
+def plot_data(ifilename="data/euler_interp"):
 
     fig, ax = plt.subplots(1, figsize=(7, 3.5))
-    data = np.load("data/euler_interp.npz")
+    data = np.load(ifilename+".npz")
     t = data["t"]
     y = data["y"]
 
@@ -86,7 +86,7 @@ def plot_data():
     ax.set_ylabel("Firing rate (spk/s)", fontsize=13)
     ax.margins(x=0)
     plt.tight_layout()
-    fig.savefig("data/dde_euler_interp.png", dpi=150)
+    fig.savefig(filename+"png", dpi=150)
 # -----------------------------------------------------------------------------
 
 # def generate_data(t, par):

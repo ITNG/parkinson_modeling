@@ -73,7 +73,7 @@ par_rate_GPe = {
 if __name__ == "__main__":
 
     start = time()
-    lib.main()
+    lib.simulate()
     print("Done in %g seconds" % (time() - start))
 
     lib.plot_data()
