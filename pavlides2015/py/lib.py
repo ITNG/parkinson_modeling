@@ -13,8 +13,8 @@ def simulate():
     initial_condition = [0] * num
     max_dalay = np.max(delays)
 
-    lib.set_history(initial_condition, nstart, max_dalay)
-    lib.euler(lib.sys_eqs, dt)
+    set_history(initial_condition, nstart, max_dalay)
+    euler_integrator(lib.sys_eqs, dt)
 # -----------------------------------------------------------------------------
 
 
@@ -68,10 +68,10 @@ def euler_integrator(f, h, filename="data/euler_interp"):
 # -----------------------------------------------------------------------------
 
 
-def plot_data(ifilename="data/euler_interp"):
+def plot_data(filename="data/euler_interp"):
 
     fig, ax = plt.subplots(1, figsize=(7, 3.5))
-    data = np.load(ifilename+".npz")
+    data = np.load(filename+".npz")
     t = data["t"]
     y = data["y"]
 
@@ -86,7 +86,7 @@ def plot_data(ifilename="data/euler_interp"):
     ax.set_ylabel("Firing rate (spk/s)", fontsize=13)
     ax.margins(x=0)
     plt.tight_layout()
-    fig.savefig(filename+"png", dpi=150)
+    fig.savefig(filename+".png", dpi=150)
 # -----------------------------------------------------------------------------
 
 # def generate_data(t, par):
