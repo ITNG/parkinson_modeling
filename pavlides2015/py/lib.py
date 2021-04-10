@@ -9,12 +9,12 @@ from run import *
 # -----------------------------------------------------------------------------
 
 
-def simulate():
+def simulate(filename):
     initial_condition = [0] * num
     max_dalay = np.max(delays)
 
     set_history(initial_condition, nstart, max_dalay)
-    euler_integrator(lib.sys_eqs, dt)
+    euler_integrator(lib.sys_eqs, dt, filename=filename)
 # -----------------------------------------------------------------------------
 
 
