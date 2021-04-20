@@ -21,22 +21,25 @@ if __name__ == "__main__":
 
     # --------------------------------------------------------------#
     def test_example():
-
+        start_time = time()
         fig, ax = plt.subplots(2, figsize=(10, 4.5))
-        obs = simulator(sim_params, true_params)
-        plot_data(obs, ax[0])
+        
+        obs1 = simulator(sim_params, true_params)
 
         sim_params['I_C'] = 100.0 / 1000.0
         sim_params['I_Str'] = 8.0 / 1000.0
-        obs = simulator(sim_params, true_params)
-        plot_data(obs, ax[1])
+        obs2 = simulator(sim_params, true_params)
+        
+        display_time(time()-start_time)
 
+        plot_data(obs1, ax[0])
+        plot_data(obs2, ax[1])
         plt.savefig("data/test.png")
         plt.close()
 
     # --------------------------------------------------------------#
 
-    def run_single_round(samples_filename="samples.pt"):
+    def run_single_round(samples_filename="data/samples.pt"):
         start_time = time()
 
         torch.set_num_threads(num_threads)
@@ -53,24 +56,27 @@ if __name__ == "__main__":
         samples = posterior.sample((num_samples,), x=obs_stats)
         torch.save(samples, f'{samples_filename}')
         display_time(time() - start_time)
-    
-    def run_multiple_round(samples_filename="samples.pt", n_rounds=2):
+
+    def run_multiple_round(samples_filename="data/samples.pt", n_rounds=2):
         start_time = time()
 
         torch.set_num_threads(num_threads)
-        simulator, prior = pe
-
-
         prior = utils.torchutils.BoxUniform(low=torch.as_tensor(prior_min),
                                             high=torch.as_tensor(prior_max))
-        posterior = infer(simulation_wrapper,
-                          prior,
-                          method=method,
-                          num_simulations=num_simulations,
-                          num_workers=num_workers)
 
         observation_trace = simulator(sim_params, true_params)
         obs_stats = calculate_summary_statistics(observation_trace)
+
+        for _ in range(num_rounds):
+
+            posterior = infer(simulation_wrapper,
+                          prior,
+                          method=method,
+                          num_simulations=100,
+                          num_workers=num_workers)
+            
+            prior = posterior.set_default_x(obs_stats)
+        
         samples = posterior.sample((num_samples,), x=obs_stats)
         torch.save(samples, f'{samples_filename}')
         display_time(time() - start_time)
@@ -92,10 +98,17 @@ if __name__ == "__main__":
         fig.savefig(f"{output_filename}", dpi=150)
         plt.close()
 
+    
     # test_example()
-    samples_filename = "data/samples.pt"
-    # run_main(samples_filename)
-    use_pairplot(samples_filename, output_filename="data/infer.png")
+
+    samples_filename = "data/single_round.pt"
+    run_single_round(samples_filename)
+    use_pairplot(samples_filename, output_filename="data/single.png")
+
+
+    samples_filename = "data/multiple_round.pt"
+    run_multiple_round(samples_filename)
+    use_pairplot(samples_filename, output_filename="data/multiple.png")
 
     # sol = simulator(sim_params, true_params)
     # t = sol['t']

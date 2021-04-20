@@ -64,7 +64,7 @@ private:
 
     // double C = 172.18 / 1000.0;
     // double Str = 8.46 / 1000.0;
-    
+
     double I_C;
     double I_Str;
 
@@ -83,7 +83,7 @@ private:
     int nstart = 50;
     bool PARAMETERs_SET = false;
     bool HISTORY_SET = false;
-    
+
     std::vector<long unsigned> plag;
 
 public:
@@ -121,8 +121,10 @@ public:
                  long unsigned n,
                  std::vector<long unsigned> &plag);
     double interp_x(double t, size_t i, long unsigned &n0);
-    double hermite_x(double t, double tn, double Xn, double Vn,
-                     double tnp1, double Xnp1, double Vnp1);
+    // double hermite_x(double t, double tn, double Xn, double Vn,
+    //                  double tnp1, double Xnp1, double Vnp1);
 };
+
+double lerp(double v0, double v1, double t);
 
 #endif // LIB_HPP

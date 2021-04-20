@@ -123,26 +123,48 @@ void DDE::euler_integrator()
     }
 }
 //---------------------------------------------------------------------------//
-double DDE::interp_x(double t, size_t i, long unsigned &n0)
+// double DDE::interp_x(double t, size_t i, long unsigned &n0)
+// {
+//     // assert(n0 >= 0);
+//     assert(n0 < t_ar.size());
+//     assert(t >= t_ar[0]);
+//     while (n0 < t_ar.size() - 1 && t_ar[n0 + 1] < t)
+//         n0++;
+//     while (t_ar[n0] > t)
+//         n0--;
+//     return hermite_x(t, t_ar[n0], y[i][n0], yp[i][n0],
+//                      t_ar[n0 + 1], y[i][n0 + 1], yp[i][n0 + 1]);
+// }
+
+// double DDE::hermite_x(double t, double tn, double Xn, double Vn,
+//                       double tnp1, double Xnp1, double Vnp1)
+// {
+//     double h = tnp1 - tn;
+//     double s = (t - tn) / h;
+//     double s1 = SQUARE(s - 1.0);
+//     double s2 = SQUARE(s);
+//     return (1.0 + 2.0 * s) * s1 * Xn + (3.0 - 2.0 * s) * s2 * Xnp1 + h * s * s1 * Vn + h * (s - 1) * s2 * Vnp1;
+// }
+//---------------------------------------------------------------------------//
+double lerp(double v0, double v1, double t)
 {
-    // assert(n0 >= 0);
-    assert(n0 < t_ar.size());
-    assert(t >= t_ar[0]);
-    while (n0 < t_ar.size() - 1 && t_ar[n0 + 1] < t)
-        n0++;
-    while (t_ar[n0] > t)
-        n0--;
-    return hermite_x(t, t_ar[n0], y[i][n0], yp[i][n0],
-                     t_ar[n0 + 1], y[i][n0 + 1], yp[i][n0 + 1]);
+    return (1 - t) * v0 + t * v1;
 }
 
-double DDE::hermite_x(double t, double tn, double Xn, double Vn,
-                      double tnp1, double Xnp1, double Vnp1)
+double DDE::interp_x(const double t0,
+                     const size_t index,
+                     long unsigned &n0)
 {
-    double h = tnp1 - tn;
-    double s = (t - tn) / h;
-    double s1 = SQUARE(s - 1.0);
-    double s2 = SQUARE(s);
-    return (1.0 + 2.0 * s) * s1 * Xn + (3.0 - 2.0 * s) * s2 * Xnp1 + h * s * s1 * Vn + h * (s - 1) * s2 * Vnp1;
+    assert(n0 < t_ar.size());
+    while ((n0 < t_ar.size() - 1) && (t_ar[n0 + 1] < t0))
+        n0++;
+    while (t_ar[n0] > t0)
+        n0--;
+
+    double a = y[index][n0];
+    double b = y[index][n0 + 1];
+    double t = (t0 - t_ar[n0]) / dt;
+
+    return lerp(a, b, t);
 }
 //---------------------------------------------------------------------------//

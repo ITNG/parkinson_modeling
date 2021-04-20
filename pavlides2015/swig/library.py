@@ -111,12 +111,12 @@ def plot_data(obs, ax=None):
         save_fig = True
 
     for i in range(num):
-        ax.plot(t, y[i, :], label=labels[i])
+        ax.plot(t, y[i, :]*1000, label=labels[i])
 
     ax.margins(x=0)
     ax.legend(frameon=False, loc='upper right')
     ax.set_xlabel("time (ms)")
-    ax.set_ylabel("Firing Rate (spk/ms")
+    ax.set_ylabel("Firing Rate (spk/s)")
 
     if save_fig:
         fig.savefig("data/fig.png")
