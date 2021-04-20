@@ -3,82 +3,135 @@ import pylab as plt
 from numpy import exp
 from time import time
 from numpy import pi, sin
+from scipy import fftpack
 from numpy.random import normal, rand
 from run import *
 
 # -----------------------------------------------------------------------------
 
 
-def simulate(filename):
-    initial_condition = [0] * num
-    max_dalay = np.max(delays)
+class STN_GPE_CTX_Circuite:
+    def __init__(self, parameters):
+        par = parameters['par']
+        par_simulation = parameters['par_simulation']
+        self.dt = par_simulation['dt']
+        self.num = par_simulation['num']
+        delays = [par['T_CS'],
+                  par['T_GS'],
+                  par['T_SG'],
+                  par['T_GG'],
+                  par['T_SC'],
+                  par['T_CC']]
+        self.max_dalay = np.max(delays)
+        self.itau_S = 1/par['tau_S']
+        self.itau_G = 1/par['tau_G']
+        self.itau_E = 1/par['tau_E']
+        self.itau_I = 1/par['tau_I']
+        self.Ms = par["Ms"]
+        self.Mg = par["Mg"]
+        self.Bs = par["Bs"]
+        self.Bg = par["Bg"]
+        self.T_SG = par["T_SG"]
+        self.T_GS = par["T_GS"]
+        self.T_GG = par["T_GG"]
+        self.T_CS = par["T_CS"]
+        self.T_SC = par["T_SC"]
+        self.wSG = par["wSG"]
+        self.wGS = par["wGS"]
+        self.wCS = par["wCS"]
+        self.wSC = par["wSC"]
+        self.wGG = par["wGG"]
+        self.wCC = par["wCC"]
+        self.C = par["C"]
+        self.Str = par["Str"]
+        self.Be = par["Be"]
+        self.Bi = par["Bi"]
+        self.Me = par["Me"]
+        self.Mi = par["Mi"]
+        self.T_CC = par["T_CC"]
 
-    set_history(initial_condition, nstart, max_dalay)
-    euler_integrator(lib.sys_eqs, dt, filename=filename)
-# -----------------------------------------------------------------------------
+        self.data_path = "data"
+        self.nstart = par_simulation["nstart"]
+        self.t_simulation = par_simulation['t_simulation']
+        self.num_iterarion = (int)(self.t_simulation/self.dt)
+        self.t = np.zeros(self.num_iterarion + self.nstart + 1)  # times
+        self.y = np.zeros((self.num, self.num_iterarion + self.nstart + 1))
+        self.output_filename = join(self.data_path, par['output_filename'])
+
+    def to_fr(self, x, M, B):
+        '''
+        convert the activity to firing rate
+        '''
+        return M / (1 + (M - B) / B * exp(-4 * x / M))
+
+    def simulate(self):
+        initial_condition = [0.0] * self.num
+        self.set_history(initial_condition, self.nstart, self.max_dalay)
+        self.euler_integrator()
+    # -------------------------------------------------------------------------
+
+    def sys_eqs(self, t, n):
+
+        dS = self.itau_S * (self.to_fr(self.wCS * self.interp_y(t - self.T_CS, 2, n) -
+                                       self.wGS *
+                                       self.interp_y(t-self.T_GS, 1, n),
+                                       self.Ms, self.Bs) - self.y[0, n])
+        dG = self.itau_G * (self.to_fr(self.wSG * self.interp_y(t - self.T_SG, 0, n) -
+                                       self.wGG * self.interp_y(
+                                           t - self.T_GG, 1, n) - self.Str,
+                                       self.Mg, self.Bg) - self.y[1, n])
+        dE = self.itau_E * (self.to_fr(-self.wSC * self.interp_y(t - self.T_SC, 0, n) -
+                                       self.wCC *
+                                       self.interp_y(
+                                           t - self.T_CC, 3, n) + self.C,
+                                       self.Me, self.Be) - self.y[2, n])
+        dI = self.itau_I * \
+            (self.to_fr(self.wCC * self.interp_y(t-self.T_CC, 2, n),
+                        self.Mi, self.Bi) - self.y[3, n])
+
+        return np.array([dS, dG, dE, dI])
+    # -------------------------------------------------------------------------
+
+    def set_history(self, hist, nstart, maxdelay):
+
+        for i in range(nstart+1):
+            self.t[i] = -(nstart - i) / float(nstart) * maxdelay
+
+        # x is: num x nstep
+        for i in range(self.num):
+            self.y[i, :(nstart+1)] = hist[i]
+    # -------------------------------------------------------------------------
+
+    def euler_integrator(self):  # f, h
+
+        for i in range(self.nstart, self.nstart + self.num_iterarion):
+            dy = self.dt * self.sys_eqs(self.t[i], i)
+            self.y[:, i+1] = self.y[:, i] + dy
+            self.t[i+1] = (i - self.nstart + 1) * self.dt
+
+        np.savez(self.output_filename,
+                 t=self.t[self.nstart:],
+                 y=self.y[:, self.nstart:])
+    # -------------------------------------------------------------------------
+
+    def interp_y(self, t0, index, n):
+        assert(t0 <= self.t[n])
+        return (np.interp(t0, self.t[:n], self.y[index, :n]))
+    # -------------------------------------------------------------------------
 
 
-def FS(x): return Ms / (1 + (Ms - Bs) / Bs * exp(-4 * x / Ms))
-
-
-def FG(x): return Mg / (1 + (Mg - Bg) / Bg * exp(-4 * x / Mg))
-
-
-def FE(x): return Me / (1 + (Me - Be) / Be * exp(-4 * x / Me))
-
-
-def FI(x): return Mi / (1 + (Mi - Bi) / Bi * exp(-4 * x / Mi))
-# -----------------------------------------------------------------------------
-
-
-def sys_eqs(t, n):
-
-    dS = 1.0 / tau_S * (FS(wCS * interp_y(t - T_CS, 2, n) - wGS * interp_y(t-T_GS, 1, n)) - y[0, n])
-    dG = 1.0 / tau_G * (FG(wSG * interp_y(t - T_SG, 0, n) - wGG * interp_y(t - T_GG, 1, n) - Str) - y[1, n])
-    dE = 1.0 / tau_E * (FE(-wSC * interp_y(t - T_SC, 0, n) - wCC * interp_y(t - T_CC, 3, n) + C) - y[2, n])
-    dI = 1.0 / tau_I * (FI(wCC * interp_y(t-T_CC, 2, n)) - y[3, n])
-
-    return np.array([dS, dG, dE, dI])
-# -----------------------------------------------------------------------------
-
-
-def interp_y(t0, index, n):
-    assert(t0 <= t[n])
-    return (np.interp(t0, t[:n], y[index, :n]))
-
-
-def set_history(hist, nstart, maxdelay):
-
-    for i in range(nstart+1):
-        t[i] = -(nstart - i) / float(nstart) * maxdelay
-
-    # x is: N x nstep
-    for i in range(num):
-        y[i, :(nstart+1)] = hist[i]
-
-
-def euler_integrator(f, h, filename="data/euler_interp"):
-
-    for i in range(nstart, nstart + num_iterarion):
-        dy = h * f(t[i], i)
-        y[:, i+1] = y[:, i] + dy
-        t[i+1] = (i - nstart + 1) * dt
-
-    np.savez(filename, t=t, y=y)
-# -----------------------------------------------------------------------------
-
-
-def plot_data(filename="data/euler_interp"):
+def plot_time_series(filename_data, filename_fig):
 
     fig, ax = plt.subplots(1, figsize=(7, 3.5))
-    data = np.load(filename+".npz")
+    data = np.load("data/"+filename_data+".npz")
     t = data["t"]
     y = data["y"]
 
-    ax.plot(t, y[0, :], label="STN", lw=1, c="b")
-    ax.plot(t, y[1, :], label="GPE", lw=1, c='g')
-    ax.plot(t, y[2, :], label="E", lw=1, c='r')
-    ax.plot(t, y[3, :], label="I", lw=1, c='cyan')
+    labels = ['STN', 'GPe', 'E', 'I']
+    colors = ['b', 'g', 'r', 'cyan']
+
+    for i in range(4):
+        ax.plot(t, y[i, :], label=labels[i], lw=1, c=colors[i])
 
     # print t[-1], y[:, -1]
     ax.legend(loc="upper right")
@@ -86,35 +139,71 @@ def plot_data(filename="data/euler_interp"):
     ax.set_ylabel("Firing rate (spk/s)", fontsize=13)
     ax.margins(x=0)
     plt.tight_layout()
-    fig.savefig(filename+".png", dpi=150)
-# -----------------------------------------------------------------------------
+    fig.savefig("data/a-"+filename_fig+".png", dpi=150)
 
-# def generate_data(t, par):
-
-#     # t in second
-#     b = par['b']    # spk/s
-#     A = par['A']    # spk/s
-#     f = par['f']    # Hz
-#     N = par['N']    
-#     dt = par['dt']  # second
-
-#     nstep = int(round(t / dt))
-#     theta = np.zeros(nstep)
-    
-#     for i in range(1, nstep):
-#         theta[i] += 2 * pi * f * dt + N * normal(0, dt)
-    
-#     fr = A * sin(theta) + b
-
-#     spike_train = np.zeros(nstep)
-#     # rand_num = rand(nstep)
-    
-#     for i in range(nstep):
-#         if rand() < fr[i]:
-#             spike_train[i] = 1
-    
-    
+# -------------------------------------------------------------------------
 
 
+def plot_frequency_spectrum(filename_data, filename_fig, xlim=[0, 100]):
 
-    
+    fig, ax = plt.subplots(1, figsize=(7, 3.5))
+    data = np.load("data/"+filename_data+".npz")
+    t = data["t"]
+    y = data["y"]
+    fs = 1000 / (t[1]-t[0])
+
+    labels = ['STN', 'GPe', 'E', 'I']
+    colors = ['b', 'g', 'r', 'cyan']
+
+    for i in range(4):
+        signal = y[i, :]
+        f, a = fft_1d_real(signal, fs)
+        ax.plot(f, a, c=colors[i], label=labels[i])
+
+    ax.legend(loc="upper right")
+    ax.set_xlabel("frequency (Hz)", fontsize=13)
+    ax.set_ylabel("amplitude", fontsize=13)
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    plt.tight_layout()
+    fig.savefig("data/f-"+filename_fig+".png", dpi=150)
+
+
+def fft_1d_real(signal, fs):
+    """
+    fft from 1 dimensional real signal
+
+    :param signal: [np.array] real signal
+    :param fs: [float] frequency sampling in Hz
+    :return: [np.array, np.array] frequency, normalized amplitude
+
+    -  example:
+
+    >>> B = 30.0  # max freqeuency to be measured.
+    >>> fs = 2 * B
+    >>> delta_f = 0.01
+    >>> N = int(fs / delta_f)
+    >>> T = N / fs
+    >>> t = np.linspace(0, T, N)
+    >>> nu0, nu1 = 1.5, 22.1
+    >>> amp0, amp1, ampNoise = 3.0, 1.0, 1.0
+    >>> signal = amp0 * np.sin(2 * np.pi * t * nu0) + amp1 * np.sin(2 * np.pi * t * nu1) +
+            ampNoise * np.random.randn(*np.shape(t))
+    >>> freq, amp = fft_1d_real(signal, fs)
+    >>> pl.plot(freq, amp, lw=2)
+    >>> pl.show()
+
+    """
+
+    N = len(signal)
+    F = fftpack.fft(signal)
+    f = fftpack.fftfreq(N, 1.0 / fs)
+    mask = np.where(f >= 0)
+
+    freq = f[mask]
+    amplitude = 2.0 * np.abs(F[mask] / N)
+
+    return freq, amplitude
+
+
+
