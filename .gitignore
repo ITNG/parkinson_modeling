@@ -38,3 +38,4 @@ prog
 *.graphml
 *.gdf
 *.so
+*.pt
