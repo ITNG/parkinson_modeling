@@ -92,8 +92,8 @@ def sys_eqns(t, k, n):
     ySmc = y[22, n] + k[22]
     dySmc = y[23, n] + k[23]
 
-    INp = IN(t, gp, a, b, coeff_ab, 0, 0.3)
-    INs = IN(t, gs, a, b, coeff_ab, 0, 0.3)
+    INp = IN(t, gp, a, b, coeff_ab, 0.1, 0.4)
+    INs = IN(t, gs, a, b, coeff_ab, 0.1, 0.4)
 
     # channel I
     ddyPs1 = inv_tau2 * (- W_s_s*gompertz(ySs1, M_str, B_str)
@@ -240,14 +240,14 @@ if __name__ == "__main__":
 
     # parameters
     tau = 2.
-    M_str = 90*1000.
-    M_stn = 250*1000.
-    M_ctx = 22*1000.
-    M_GP = 300*1000.
-    B_str = 0.1*1000
-    B_stn = 50*1000.
-    B_ctx = 4*1000.
-    B_GP = 150*1000
+    M_str = 90/1000.
+    M_stn = 250/1000.
+    M_ctx = 22/1000.
+    M_GP = 300/1000.
+    B_str = 0.1/1000
+    B_stn = 50/1000.
+    B_ctx = 4/1000.
+    B_GP = 150/1000
     da = 0.3
     a = 100.0
     b = 1000.0
@@ -316,7 +316,7 @@ if __name__ == "__main__":
     print("Done in %g seconds" % (time()-start))
     labels = ['str1', 'str2', 'stn', 'gpe', 'gpi']
     for i in range(0, 10, 2):
-        plt.plot(t, y[i, :]/1000, label=labels[i//2])
+        plt.plot(t, y[i, :], label=labels[i//2])
 
     plt.legend()
     plt.savefig(f"data/{output_filename}.png", dpi=150)
