@@ -12,7 +12,8 @@ from library import (simulator,
                      plot_data,
                      display_time,
                      simulation_wrapper,
-                     calculate_summary_statistics)
+                     statistics_prop,
+                     get_max_probability)
 if not os.path.exists('data'):
     os.makedirs('data')
 
@@ -20,21 +21,13 @@ if not os.path.exists('data'):
 if __name__ == "__main__":
 
     # --------------------------------------------------------------#
-    def test_example():
-        start_time = time()
-        fig, ax = plt.subplots(2, figsize=(10, 4.5))
+    def sample_curve(par, filename='data/fig.png'):
         
-        obs1 = simulator(sim_params, true_params)
+        fig, ax = plt.subplots(1, figsize=(10, 3.5))
+        obs1 = simulator(sim_params, par)
 
-        sim_params['I_C'] = 100.0 / 1000.0
-        sim_params['I_Str'] = 8.0 / 1000.0
-        obs2 = simulator(sim_params, true_params)
-        
-        display_time(time()-start_time)
-
-        plot_data(obs1, ax[0])
-        plot_data(obs2, ax[1])
-        plt.savefig("data/test.png")
+        plot_data(obs1, ax)
+        plt.savefig(f"{filename}")
         plt.close()
 
     # --------------------------------------------------------------#
@@ -52,7 +45,7 @@ if __name__ == "__main__":
                           num_workers=num_workers)
 
         observation_trace = simulator(sim_params, true_params)
-        obs_stats = calculate_summary_statistics(observation_trace)
+        obs_stats = statistics_prop(observation_trace)
         samples = posterior.sample((num_samples,), x=obs_stats)
         torch.save(samples, f'{samples_filename}')
         display_time(time() - start_time)
@@ -65,18 +58,21 @@ if __name__ == "__main__":
                                             high=torch.as_tensor(prior_max))
 
         observation_trace = simulator(sim_params, true_params)
-        obs_stats = calculate_summary_statistics(observation_trace)
+        obs_stats = statistics_prop(observation_trace,
+                                    method=sim_params['statistics_method'])
+        # print(obs_stats.shape)
+        # exit(0)
 
         for _ in range(num_rounds):
 
             posterior = infer(simulation_wrapper,
-                          prior,
-                          method=method,
-                          num_simulations=100,
-                          num_workers=num_workers)
-            
+                              prior,
+                              method=method,
+                              num_simulations=300,
+                              num_workers=num_workers)
+
             prior = posterior.set_default_x(obs_stats)
-        
+
         samples = posterior.sample((num_samples,), x=obs_stats)
         torch.save(samples, f'{samples_filename}')
         display_time(time() - start_time)
@@ -98,19 +94,18 @@ if __name__ == "__main__":
         fig.savefig(f"{output_filename}", dpi=150)
         plt.close()
 
-    
     # test_example()
 
-    samples_filename = "data/single_round.pt"
-    run_single_round(samples_filename)
-    use_pairplot(samples_filename, output_filename="data/single.png")
-
+    # samples_filename = "data/single_round.pt"
+    # run_single_round(samples_filename)
+    # use_pairplot(samples_filename, output_filename="data/single.png")
 
     samples_filename = "data/multiple_round.pt"
-    run_multiple_round(samples_filename)
-    use_pairplot(samples_filename, output_filename="data/multiple.png")
+    # run_multiple_round(samples_filename)
+    # use_pairplot(samples_filename, output_filename="data/multiple.png")
 
-    # sol = simulator(sim_params, true_params)
-    # t = sol['t']
-    # y = sol['data']
-    # print(len(t), y.shape)
+    par = get_max_probability(samples_filename)
+    sample_curve(par, "data/sample.png")
+    sample_curve(true_params, "data/true.png")
+
+

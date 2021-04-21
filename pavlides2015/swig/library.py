@@ -4,6 +4,7 @@ import numpy as np
 import pylab as plt
 from numpy import exp
 from copy import copy
+from scipy import fftpack
 from config import sim_params, true_params
 from scipy.integrate import odeint
 from scipy.stats import (kurtosis, skew)
@@ -17,8 +18,10 @@ def simulation_wrapper(params):
     Summarizes the output of the simulator and converts it 
     to `torch.Tensor`.
     '''
-    obs = simulator(sim_params=sim_params, params=params)
-    stats = torch.as_tensor(calculate_summary_statistics(obs))
+    results = simulator(sim_params=sim_params, params=params)
+    stats = torch.as_tensor(statistics_prop(results,
+                                            method=sim_params['statistics_method'])
+                            )
     return stats
 # ------------------------------------------------------------------#
 
@@ -64,12 +67,13 @@ def simulator(sim_params, params):
 # ------------------------------------------------------------------
 
 
-def calculate_summary_statistics(obs):
+def statistics_prop(obs, method='moments'):
     """Calculate summary statistics
 
     Parameters
     ----------
     x : output of the simulator
+    method : 'moments' or 'firing_rate'
 
     Returns
     -------
@@ -77,22 +81,45 @@ def calculate_summary_statistics(obs):
     """
 
     t = obs["t"]
+    fs = 1 / (t[-1] - t[-2]) * 1000 # frequency sampling [Hz]
     dt = sim_params["dt"]
 
+    labels = ['S', 'G', 'E', 'I']
+
     # initialise array of spike counts
-    S = obs["data"][0, :]
-    G = obs["data"][1, :]
-    E = obs["data"][2, :]
-    I = obs["data"][3, :]
+    # S = obs["data"][0, :]
+    # G = obs["data"][1, :]
+    # E = obs["data"][2, :]
+    # I = obs["data"][3, :]
 
-    s = np.mean(S), np.std(S), skew(S), kurtosis(S)
-    g = np.mean(G), np.std(G), skew(G), kurtosis(G)
-    e = np.mean(E), np.std(E), skew(E), kurtosis(E)
-    i = np.mean(I), np.std(I), skew(I), kurtosis(I)
+    if method == 'moments':
+        n0 = 4  # number of features
+        stats_vec = np.zeros(4*n0)
 
-    sum_stats_vec = np.concatenate((s, g, e, i))
+        for i in range(4):
+            data = np.array([np.mean(obs["data"][i, :]),
+                             np.std(obs["data"][i, :]),
+                             skew(obs["data"][i, :]),
+                             kurtosis(obs["data"][i, :])])
+            stats_vec[i*n0:(i+1)*n0] = data
 
-    return sum_stats_vec
+    else:
+        n0 = 2  # number of features
+        stats_vec = np.zeros(4*n0)
+        # fmax = np.zeros(4)
+
+        # for i in range(4):
+        #     f, a = fft_1d_real(obs['data'][i, :], fs)
+        #     fmax[i] = find_max_frequency(a, f, thr=0.05)
+        #     print('fmax : ', fmax[i])
+
+        for i in range(4):
+            data = np.array([np.min(obs["data"][i, :]),
+                             np.max(obs["data"][i, :])
+                             ]) # fmax[i]
+            stats_vec[i*n0:(i+1)*n0] = data
+
+    return stats_vec
 
 
 # ------------------------------------------------------------------
@@ -117,10 +144,31 @@ def plot_data(obs, ax=None):
     ax.legend(frameon=False, loc='upper right')
     ax.set_xlabel("time (ms)")
     ax.set_ylabel("Firing Rate (spk/s)")
+    plt.tight_layout()
 
     if save_fig:
         fig.savefig("data/fig.png")
 # ------------------------------------------------------------------
+
+
+def get_max_probability(samples_filename):
+
+    try:
+        samples = torch.load(samples_filename)
+        samples = samples.numpy()
+    except:
+        print("no input file!")
+        exit(0)
+
+    dim = samples.shape[1]
+    max_values = np.zeros(dim)
+
+    for i in range(dim):
+        n, bins = np.histogram(samples[:, i], bins=50, density=True)
+        max_value = bins[np.argmax(n)]
+        max_values[i] = max_value
+
+    return max_values
 
 
 def display_time(time):
@@ -133,3 +181,48 @@ def display_time(time):
     print("Done in %d hours %d minutes %.4f seconds"
           % (hour, minute, second))
 
+
+def fft_1d_real(signal, fs):
+    """
+    fft from 1 dimensional real signal
+
+    :param signal: [np.array] real signal
+    :param fs: [float] frequency sampling in Hz
+    :return: [np.array, np.array] frequency, normalized amplitude
+
+    -  example:
+
+    >>> B = 30.0  # max freqeuency to be measured.
+    >>> fs = 2 * B
+    >>> delta_f = 0.01
+    >>> N = int(fs / delta_f)
+    >>> T = N / fs
+    >>> t = np.linspace(0, T, N)
+    >>> nu0, nu1 = 1.5, 22.1
+    >>> amp0, amp1, ampNoise = 3.0, 1.0, 1.0
+    >>> signal = amp0 * np.sin(2 * np.pi * t * nu0) + amp1 * np.sin(2 * np.pi * t * nu1) +
+            ampNoise * np.random.randn(*np.shape(t))
+    >>> freq, amp = fft_1d_real(signal, fs)
+    >>> pl.plot(freq, amp, lw=2)
+    >>> pl.show()
+
+    """
+
+    N = len(signal)
+    F = fftpack.fft(signal)
+    f = fftpack.fftfreq(N, 1.0 / fs)
+    mask = np.where(f >= 0)
+
+    freq = f[mask]
+    amplitude = 2.0 * np.abs(F[mask] / N)
+
+    return freq, amplitude
+
+
+def find_max_frequency(amp, frq, thr=0.05):
+
+    i = np.argmax(amp)
+    if amp[i] > thr:
+        return frq[i]
+    else:
+        return 0
