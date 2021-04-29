@@ -5,6 +5,8 @@ import pylab as plt
 from numpy import exp
 from copy import copy
 from scipy import fftpack
+from scipy import signal
+from sbi.analysis import pairplot
 from config import sim_params, true_params
 from scipy.integrate import odeint
 from scipy.stats import (kurtosis, skew)
@@ -81,7 +83,7 @@ def statistics_prop(obs, method='moments'):
     """
 
     t = obs["t"]
-    fs = 1 / (t[-1] - t[-2]) * 1000 # frequency sampling [Hz]
+    fs = 1 / (t[-1] - t[-2]) * 1000  # frequency sampling [Hz]
     dt = sim_params["dt"]
 
     labels = ['S', 'G', 'E', 'I']
@@ -104,19 +106,18 @@ def statistics_prop(obs, method='moments'):
             stats_vec[i*n0:(i+1)*n0] = data
 
     else:
-        n0 = 2  # number of features
+        n0 = 3  # number of features
         stats_vec = np.zeros(4*n0)
-        # fmax = np.zeros(4)
+        fmax = np.zeros(4)
 
-        # for i in range(4):
-        #     f, a = fft_1d_real(obs['data'][i, :], fs)
-        #     fmax[i] = find_max_frequency(a, f, thr=0.05)
-        #     print('fmax : ', fmax[i])
+        for i in range(4):
+            f, a = fft_1d_real(obs['data'][i, :], fs)
+            fmax[i] = find_max_frequency(a, f, thr=0.005)
 
         for i in range(4):
             data = np.array([np.min(obs["data"][i, :]),
-                             np.max(obs["data"][i, :])
-                             ]) # fmax[i]
+                             np.max(obs["data"][i, :]),
+                             fmax[i]])
             stats_vec[i*n0:(i+1)*n0] = data
 
     return stats_vec
@@ -216,13 +217,44 @@ def fft_1d_real(signal, fs):
     freq = f[mask]
     amplitude = 2.0 * np.abs(F[mask] / N)
 
-    return freq, amplitude
+    # plt.plot(freq, amplitude)
+    # plt.show()
+    # exit(0)
+
+    return freq[1:], amplitude[1:]
 
 
-def find_max_frequency(amp, frq, thr=0.05):
+def welch(sig, fs):
+
+    f, amp = signal.welch(sig, fs, nperseg=256)
+
+    # plt.plot(f, amp)
+    # plt.show()
+    # exit(0)
+
+    return f, amp
+
+def find_max_frequency(amp, frq, thr=0.005):
 
     i = np.argmax(amp)
     if amp[i] > thr:
         return frq[i]
     else:
         return 0
+
+def use_pairplot(samples_filename, output_filename="data/infer.png"):
+
+        try:
+            samples = torch.load(samples_filename)
+        except:
+            print("no input file!")
+            exit(0)
+
+        fig, axes = pairplot(samples,
+                             labels=['SG', 'GS', 'CS', 'SC', 'GG', 'CC'],
+                             figsize=(10, 8),
+                             points=true_params,
+                             points_offdiag={'markersize': 6},
+                             points_colors='r')
+        fig.savefig(f"{output_filename}", dpi=150)
+        plt.close()
